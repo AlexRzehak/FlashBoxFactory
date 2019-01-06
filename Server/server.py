@@ -1,5 +1,4 @@
 import os
-import math
 
 import redis
 from flask import Flask, request, redirect, url_for, flash, render_template, send_from_directory, abort, jsonify
