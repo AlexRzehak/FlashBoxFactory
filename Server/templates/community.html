@@ -1,0 +1,19 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+
+{% block title %}Community{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<h1 class="text-center">Hello {{current_user._id}}!</h1>
+{{flashed_messages(container=True)}}
+
+<h2 class="text-center">Soon, you can lookup users here!</h2>
+
+<p class="text-center">But right now, here is only <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">YOU</a></p>
+
+{% endblock %}

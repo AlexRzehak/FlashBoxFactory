@@ -4,9 +4,22 @@
 
 {% block title %}Your Profile{% endblock %}
 
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
 {% block content %}
+<!-- <div class="container">
+    <div class="btn-group">
+        <a href="{{url_for('index')}}" class="btn btn-primary btn-md" role="button">Start</a>
+        <a href="{{url_for('logout')}}" class="btn btn-primary btn-md" role="button">Logout</a>
+        <button type="button" class="btn btn-primary btn-md disabled">User Settings</button>
+    </div>
+</div> -->
+
+
 <p class="container">profile-pic</p>
-<h2 class="container">{{user._id}}</h2>
+<h2 class="container">{{user._id}} <button type="button" class="btn btn-primary btn-md disabled">Profile Settings</button></h2>
 <h3 class="container">Here you can look at all your stuff.<br>
     Or you can change the stuff you show people!<br>
     Like Achievements!</h3>

@@ -4,6 +4,10 @@
 
 {% block title %}Start{% endblock %}
 
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
 {% block content %}
 <h1 class="text-center">Hello {{current_user._id}}!</h1>
 
@@ -11,13 +15,17 @@
     <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Show Profile</a>
     <br>
     <br>
-    <div class="text-center">        
+    <div class="text-center">
         <div class="btn-group btn-group-justified">
             <a href="{{url_for('huge_list')}}" class="btn btn-success btn-lg" role="button">Explore!</a>
         </div>
         <br>
+        <div class="btn-group btn-group-justified">
+            <a href="{{url_for('huge_list')}}" class="btn btn-success btn-lg disabled" role="button">Challenge!</a>
+        </div>
         <br>
-        <p>You are not {{current_user._id}}?  <a href="{{url_for('logout')}}" class="btn btn-primary btn-md" role="button">Logout</a></p>
+        <br>
+        <p>You are not {{current_user._id}}? <a href="{{url_for('logout')}}" class="btn btn-primary btn-md" role="button">Logout</a></p>
     </div>
 </div>
 {{flashed_messages(container=True)}}

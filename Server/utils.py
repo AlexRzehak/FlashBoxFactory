@@ -19,6 +19,10 @@ def clean_users(db):
     db.hdel('users', *db.hgetall('users').keys())
 
 
+def page_range(total_count: int, per_page: int):
+    return range(1, int(math.ceil(total_count / per_page))+1)
+
+
 class Pagination:
 
     def __init__(self, parent: object,
@@ -38,11 +42,9 @@ class Pagination:
         self.query = None
 
     def _init_items(self):
-        # TODO: change logic here
         _from = (self.page-1) * self.per_page
         to = _from + self.per_page
 
-        # TODO: change logic here
         self.items = self.parent[_from:to]
 
     @property

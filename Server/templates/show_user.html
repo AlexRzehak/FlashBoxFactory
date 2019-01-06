@@ -4,9 +4,13 @@
 
 {% block title %}User: {{user._id}}{% endblock %}
 
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
 {% block content %}
 <p class="container">profile-pic</p>
-<h2 class="container">{{user._id}}</h2>
+<h2 class="container">{{user._id}} <button type="button" class="btn btn-primary btn-md disabled">Challenge!</button></h2>
 <h3 class="container">Here you can look at all his stuff.<br>
     Like Achievements!</h3>
 

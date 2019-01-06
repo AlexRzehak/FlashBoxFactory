@@ -1,4 +1,5 @@
 import os
+import math
 
 import redis
 from flask import Flask, request, redirect, url_for, flash, render_template, send_from_directory, abort, jsonify
@@ -34,13 +35,19 @@ Bootstrap(app)
 @app.route('/index')
 def index():
     if current_user.is_authenticated:
-        return render_template('welcome.html')
+        return render_template('welcome.html', active='start')
     return render_template('index.html')
 
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
+
+
+@app.route('/community')
+@login_required
+def user_list():
+    return render_template('community.html', active='community')
 
 
 @app.route('/cardboxes/<_id>')
@@ -66,7 +73,9 @@ def show_user(_id):
         return redirect(url_for('index'))
 
     if user._id == current_user._id:
-        return render_template('show_user_myself.html', user=user)
+        return render_template('show_user_myself.html',
+                               user=user,
+                               active='profile')
 
     return render_template('show_user.html', user=user)
 
@@ -78,33 +87,62 @@ def huge_list():
 
     args = request.args
 
-    sort_key = args.get('sort') or 'rating'
+    # <-- receive parameters -->
+    sort_key = args.get('sort')
     sort_direction = args.get('direction')
-    page = int(args.get('page')) if args.get('page') else 1
-
-    if not sort_direction:
-        sort_direction = True
-    else:
-        sort_direction = sort_direction == 'desc'
-
+    page = args.get('page')
     filter_option = args.get('foption')
     filter_term = args.get('fterm')
 
+    # <-- validate parameters and set fallback values -->
+    sort_key_possible = ('name', 'owner', 'rating')
+    sort_key = sort_key if sort_key in sort_key_possible else 'rating'
+
+    sort_direction_possible = ('desc', 'asc')
+    sort_direction = (sort_direction
+                      if sort_direction in sort_direction_possible
+                      else 'desc')
+    sort_direction_bool = sort_direction == 'desc'
+
+    filter_option_possible = ('name', 'owner', 'tags')
+    filter_option = (filter_option if filter_option in filter_option_possible
+                     else 'tags')
+
+    # filter_option: filter only applied if non-empty string given (None case)
+    # TODO: filter_option validation analogous to tags/user input sanitization
+
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    # <-- filter form -->
     form = FilterForm()
     if form.validate_on_submit():
         filter_option = form.option.data
         filter_term = form.term.data
 
         kwargs = {key: value for key, value in args.items()}
-        kwargs.update(foption=filter_option, fterm=filter_term, page=1)
+        kwargs.update(sort=sort_key, direction=sort_direction,
+                      foption=filter_option, fterm=filter_term, page=1)
 
         return redirect(url_for('huge_list', **kwargs))
 
     form.term.data = filter_term
-    filter_option = filter_option or 'tags'
     form.option.data = filter_option
 
-    def sort_key_of(box):
+    cardboxes = CardBox.fetch_all(db)
+
+    # <-- filter process -->
+    # checks for filter_option = 'tags' if term exists in tag list
+    # checks for filter_option = 'name', 'owner' if term is part of string
+    if filter_term:
+        cardboxes = [box for box in cardboxes
+                     if filter_term in getattr(box, filter_option)]
+
+    # <-- sort process -->
+    def _sort_key_of(box):
         if sort_key == 'name':
             return box.name.lower()
         if sort_key == 'owner':
@@ -112,38 +150,39 @@ def huge_list():
 
         return getattr(box, sort_key)
 
-    cardboxes = CardBox.fetch_all(db)
+    if cardboxes:
+        cardboxes.sort(key=_sort_key_of, reverse=sort_direction_bool)
 
-    if filter_term:
-        cardboxes = [c for c in cardboxes
-                     if filter_term in getattr(c, filter_option)]
-
-    if sort_key and cardboxes and hasattr(cardboxes[0], sort_key):
-        cardboxes.sort(key=sort_key_of, reverse=sort_direction)
-    else:
-        sort_key = None
+    # <-- pagination -->
+    per_page = 50
+    cardbox_count = len(cardboxes)
+    page_range = utils.page_range(total_count=cardbox_count, per_page=per_page)
+    page = (page if page in page_range else 1)
 
     pagination = utils.Pagination(parent=cardboxes,
                                   page=page,
-                                  per_page=50,
-                                  total_count=len(cardboxes))
+                                  per_page=per_page,
+                                  total_count=cardbox_count)
 
+    # <-- standard values-->
     kwargs = {key: value for key, value in args.items()}
-    kwargs.update(page=page, foption=filter_option,
-                  direction=sort_direction)
+    kwargs.update(sort=sort_key, direction=sort_direction,
+                  foption=filter_option, fterm=filter_term, page=page)
 
+    # <-- creation of dynamic content -->
     pag_kwargs = dict(pagination=pagination, endpoint='huge_list',
                       prev='<', next='>', ellipses='...', size='lg',
                       args=kwargs)
 
     table = CardBoxTable(pagination.items,
-                         sort_reverse=sort_direction,
+                         sort_reverse=sort_direction_bool,
                          sort_by=sort_key)
 
     return render_template('huge_list.html',
                            table=table,
                            filter_form=form,
-                           pagination_kwargs=pag_kwargs)
+                           pagination_kwargs=pag_kwargs,
+                           active='explore')
 
 
 @app.route('/cardboxes/<_id>/rate')

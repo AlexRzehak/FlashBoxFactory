@@ -29,6 +29,8 @@ class CardBoxTable(Table):
 class FilterForm(FlaskForm):
 
     option = RadioField(
-        '', choices=[('tags', 'Tags'), ('owner', 'Username')], default='tags')
+        '', choices=[('tags', 'Tags'), ('name', 'Cardbox Name'),
+                     ('owner', 'Username')],
+        default='tags')
     term = StringField('Filter Term')
     submit = SubmitField('Filter!')

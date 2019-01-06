@@ -14,8 +14,10 @@ TAGS = ['maths', 'physics', 'chemistry', 'music', 'history', 'silent_movies',
         'elon_musk', 'cybervalley', 'exodia', 'cheese', 'more_cheese', '1984',
         'Mr.Robot', 'owo', ':D', 'insert tag here', 'Hääyöaieuutinen']
 
-USER = 'Obi_wan_Kenobi'
-PASSWORD = 'highground'
+# USER = 'Obi_wan_Kenobi'
+# PASSWORD = 'highground'
+USER = 'DER MARKUS'
+PASSWORD = 'wurstbrot'
 
 
 def create_many_boxes(username, password, number=100):
@@ -48,8 +50,14 @@ def print_boxes():
     print(db.hgetall('cardboxs'))
 
 
+def print_users():
+    db = redis.StrictRedis(host='localhost', port=6379, db=0)
+    print(db.hgetall('users'))
+
+
 def main():
-    create_many_boxes(USER, PASSWORD, 15)
+    # print_boxes()
+    create_many_boxes(USER, PASSWORD, 100)
     # test_download()
 
 
