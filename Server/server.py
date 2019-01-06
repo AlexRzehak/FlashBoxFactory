@@ -9,7 +9,7 @@ from werkzeug.urls import url_parse
 
 import utils
 from model import CardBox
-from auth import User, RegistrationForm, LoginForm
+from auth import User, RegistrationForm, LoginForm, ChangePasswordForm
 from display import CardBoxTable, FilterForm
 
 
@@ -77,6 +77,28 @@ def show_user(_id):
                                active='profile')
 
     return render_template('show_user.html', user=user)
+
+
+@app.route('/user/settings', methods=['POST', 'GET'])
+@login_required
+def user_settings():
+    password_form = ChangePasswordForm()
+
+    if password_form.validate_on_submit():
+
+        if not current_user.check_password(password_form.old_password.data):
+            flash('Old passwort not correct.', 'error')
+            return redirect(url_for('user_settings'))
+
+        current_user.set_password(password_form.new_password.data)
+        current_user.store(db)
+
+        flash('Successfully changed password!')
+
+        return redirect(url_for('user_settings'))
+
+    return render_template('profile_settings.html', user=current_user,
+                           password_form=password_form)
 
 
 # TODO make more readable and fix minor sorting bugs

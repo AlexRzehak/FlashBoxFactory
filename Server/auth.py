@@ -98,3 +98,17 @@ class LoginForm(FlaskForm):
 
         if not user:
             raise ValidationError('User does NOT exist. Mostly.')
+
+
+class ChangePasswordForm(FlaskForm):
+
+    old_password = PasswordField('Old Password',
+                                validators=[DataRequired(),
+                                            Length(min=6, max=32)])
+    new_password = PasswordField('New Password',
+                                validators=[DataRequired(),
+                                            Length(min=6, max=32)])
+    new_password2 = PasswordField('Confirm new Password',
+                                 validators=[DataRequired(),
+                                             EqualTo('new_password')])
+    submit = SubmitField('Change')

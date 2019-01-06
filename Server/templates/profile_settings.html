@@ -1,0 +1,30 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+{%from "bootstrap/wtf.html" import quick_form %}
+
+{% block title %}Edit Profile of {{user._id}}{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+
+{{flashed_messages(container=True)}}
+
+<h2 class="container">Editing profile of {{user._id}}</h2>
+
+    <div class="container">
+        <p>profile-pic</p>
+        <h3>Change Profile Picture <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
+        <br>
+        <h3>Stuff like Achievements!</h3>
+        <h3>Change Showcase <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
+        <br>
+        <h3>Change Password <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
+        {{quick_form(password_form)}}
+        <br>
+        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done</a>
+    </div>
+{% endblock %}

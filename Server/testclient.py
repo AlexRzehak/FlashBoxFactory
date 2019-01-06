@@ -16,8 +16,10 @@ TAGS = ['maths', 'physics', 'chemistry', 'music', 'history', 'silent_movies',
 
 # USER = 'Obi_wan_Kenobi'
 # PASSWORD = 'highground'
-USER = 'DER MARKUS'
-PASSWORD = 'wurstbrot'
+# USER = 'DER MARKUS'
+# PASSWORD = 'wurstbrot'
+USER = 'deppo'
+PASSWORD = 'doofkopp'
 
 
 def create_many_boxes(username, password, number=100):
@@ -57,7 +59,7 @@ def print_users():
 
 def main():
     # print_boxes()
-    create_many_boxes(USER, PASSWORD, 100)
+    create_many_boxes(USER, PASSWORD, 1)
     # test_download()
 
 
