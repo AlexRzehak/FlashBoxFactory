@@ -12,13 +12,15 @@ TABLE_USER = 'users'
 class User:
 
     def __init__(self, _id: str, password_hash=None, cardboxs=[], rated=[],
+                 score=0, following=[],
                  is_active=None, is_authenticated=None, is_anonymous=None):
 
         self._id = _id
-        # self.rating = rating
         self.password_hash = password_hash
         self.cardboxs = cardboxs
         self.rated = rated
+        self.score = score
+        self.following = following
 
         self.is_active = True
         self.is_authenticated = True
@@ -33,6 +35,10 @@ class User:
     def check_password(self, password_plain: str) -> bool:
         return check_password_hash(self.password_hash, password_plain)
 
+    def update_score(self) -> int:
+        # TODO implement function
+        pass
+
     def store(self, db):
         db.hset(TABLE_USER, self._id, utils.jsonify(self))
 
@@ -45,6 +51,19 @@ class User:
 
         _dict = utils.unjsonify(json_string)
         return User(**_dict)
+
+    # TODO Add implementation that does not crash with too much data
+    @staticmethod
+    def fetch_all(db):
+        dict_json_users = db.hgetall(TABLE_USER)
+
+        if not dict_json_users:
+            return []
+
+        users = [User(**utils.unjsonify(d))
+                 for d in dict_json_users.values()]
+
+        return users
 
     @staticmethod
     def exists(db, user_id: str) -> bool:
@@ -103,12 +122,12 @@ class LoginForm(FlaskForm):
 class ChangePasswordForm(FlaskForm):
 
     old_password = PasswordField('Old Password',
-                                validators=[DataRequired(),
-                                            Length(min=6, max=32)])
-    new_password = PasswordField('New Password',
-                                validators=[DataRequired(),
-                                            Length(min=6, max=32)])
-    new_password2 = PasswordField('Confirm new Password',
                                  validators=[DataRequired(),
-                                             EqualTo('new_password')])
+                                             Length(min=6, max=32)])
+    new_password = PasswordField('New Password',
+                                 validators=[DataRequired(),
+                                             Length(min=6, max=32)])
+    new_password2 = PasswordField('Confirm new Password',
+                                  validators=[DataRequired(),
+                                              EqualTo('new_password')])
     submit = SubmitField('Change')

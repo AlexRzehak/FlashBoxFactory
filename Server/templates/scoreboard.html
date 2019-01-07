@@ -2,25 +2,22 @@
 
 {%from "bootstrap/pagination.html" import render_pagination %}
 {% from "bootstrap/utils.html" import flashed_messages %}
-{%from "bootstrap/wtf.html" import quick_form %}
 
-{% block title %}Community{% endblock %}
+{% block title %}TScoreboard{% endblock %}
 
 {% block navbar %}
 {% include 'navbar.html' %}
 {% endblock %}
 
 {% block content %}
-<h1 class="text-center">Hello {{current_user._id}}!</h1>
+<h1 class="text-center">User Scores</h1>
 
 {{flashed_messages(container=True)}}
-<div class="container">
-        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md disabled" role="button">Only followed Users</a>
-</div>
 
 <div class="container">
     <br>
-    {{quick_form(search_form)}}
+    <h2>Your Score! Always improve yourself!</h2>
+    {{you}}
     <br>
     {{render_pagination(**pagination_kwargs)}}
     <br>
@@ -30,3 +27,11 @@
 </div>
 
 {% endblock %}
+
+<!-- <div class="container">
+    <ul class="list-group">
+        {% for key in keys %}
+        <a href="{{url_for('show_box', _id=key)}}" class="list-group-item">{{key}}</a>
+        {% endfor %}
+    </ul>
+</div> -->

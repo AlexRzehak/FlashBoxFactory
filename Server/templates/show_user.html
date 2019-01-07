@@ -12,7 +12,7 @@
 <p class="container">profile-pic</p>
 <h2 class="container">{{user._id}} <div class="btn-group">
     <button type="button" class="btn btn-primary btn-md disabled">Follow</button>
-    <button type="button" class="btn btn-primary btn-md disabled">Challenge!</button></h2>            
+    <a href="{{url_for('challenge', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>            
 </div></h2>
 <h3 class="container">Here you can look at all his stuff.<br>
     Like Achievements!</h3>

@@ -10,7 +10,7 @@ from werkzeug.urls import url_parse
 import utils
 from model import CardBox
 from auth import User, RegistrationForm, LoginForm, ChangePasswordForm
-from display import CardBoxTable, FilterForm
+from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm
 
 
 app = Flask(__name__)
@@ -43,10 +43,10 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
 
 
-@app.route('/community')
+@app.route('/challenge/<_id>')
 @login_required
-def user_list():
-    return render_template('community.html', active='community')
+def challenge(_id):
+    return render_template('challenge.html', partner=_id)
 
 
 @app.route('/cardboxes/<_id>')
@@ -101,7 +101,157 @@ def user_settings():
                            password_form=password_form)
 
 
-# TODO make more readable and fix minor sorting bugs
+@app.route('/community', methods=['POST', 'GET'])
+@login_required
+def user_list():
+
+    args = request.args
+
+    # <-- receive parameters -->
+    sort_key = args.get('sort')
+    sort_direction = args.get('direction')
+    page = args.get('page')
+    filter_term = args.get('fterm')
+
+    # <-- validate parameters and set fallback values -->
+    sort_key_possible = ('username', 'score')
+    sort_key = sort_key if sort_key in sort_key_possible else 'score'
+
+    sort_direction_possible = ('desc', 'asc')
+    sort_direction = (sort_direction
+                      if sort_direction in sort_direction_possible
+                      else 'desc')
+    sort_direction_bool = sort_direction == 'desc'
+
+    # filter_term: filter only applied if non-empty string given (None case)
+    # TODO: filter_term validation analogous to tags/user input sanitization
+
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    # <-- search form -->
+    form = CommunityForm()
+    if form.validate_on_submit():
+        filter_term = form.term.data
+
+        kwargs = {key: value for key, value in args.items()}
+        kwargs.update(sort=sort_key, direction=sort_direction,
+                      fterm=filter_term, page=1)
+
+        return redirect(url_for('user_list', **kwargs))
+
+    form.term.data = filter_term
+
+    # TODO show followed users properly
+
+    users = User.fetch_all(db)
+
+    # <-- filter process -->
+    if filter_term:
+        users = [user for user in users
+                 if filter_term.lower() in getattr(user, '_id').lower()]
+
+    # <-- sort process -->
+    def _sort_key_of(user):
+        if sort_key == 'username':
+            return user._id.lower()
+
+        return getattr(user, sort_key)
+
+    if users:
+        users.sort(key=_sort_key_of, reverse=sort_direction_bool)
+
+    # <-- pagination -->
+    per_page = 50
+    user_count = len(users)
+    page_range = utils.page_range(total_count=user_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=users,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=user_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(sort=sort_key, direction=sort_direction,
+                  fterm=filter_term, page=page)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='user_list',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    table = UserTable(pagination.items,
+                      sort_reverse=sort_direction_bool,
+                      sort_by=sort_key)
+
+    return render_template('community.html',
+                           table=table,
+                           search_form=form,
+                           pagination_kwargs=pag_kwargs,
+                           active='community')
+
+
+@app.route('/scoreboard')
+@login_required
+def score_list():
+
+    args = request.args
+
+    # <-- receive parameters -->
+    page = args.get('page')
+
+    # <-- validate parameters and set fallback values -->
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    users = User.fetch_all(db)
+
+    if users:
+            users.sort(key=lambda u: u.score, reverse=True)
+
+    # <-- pagination -->
+    per_page = 50
+    user_count = len(users)
+    page_range = utils.page_range(total_count=user_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=users,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=user_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(page=page)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='score_list',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    big_table = ScoreTable(pagination.items)
+
+    # TODO Show score not retarded
+    you = [User.fetch(db, current_user._id)]
+    small_table = ScoreTable(you)
+
+    print('lul')
+
+    return render_template('scoreboard.html',
+                           table=big_table,
+                           you=small_table,
+                           pagination_kwargs=pag_kwargs,
+                           active='community')
+
+
 @app.route('/cardboxes', methods=['POST', 'GET'])
 @login_required
 def huge_list():
