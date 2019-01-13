@@ -35,12 +35,21 @@ class User:
     def check_password(self, password_plain: str) -> bool:
         return check_password_hash(self.password_hash, password_plain)
 
+    def store(self, db):
+        db.hset(TABLE_USER, self._id, utils.jsonify(self))
+
     def update_score(self) -> int:
         # TODO implement function
         pass
 
-    def store(self, db):
-        db.hset(TABLE_USER, self._id, utils.jsonify(self))
+    def toggle_follow(self, _id):
+        if (_id in self.following):
+            self.following.remove(_id)
+        else:
+            self.following.append(_id)
+
+    def is_following(self, _id):
+            return (_id in self.following)
 
     @staticmethod
     def fetch(db, user_id: str):

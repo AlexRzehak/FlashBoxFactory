@@ -11,22 +11,30 @@
 {% endblock %}
 
 {% block content %}
-<h1 class="text-center">Hello {{current_user._id}}!</h1>
+<h1 class="text-center">Community Navigation</h1>
 
 {{flashed_messages(container=True)}}
 <div class="container">
-        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md disabled" role="button">Only followed Users</a>
+    <div class="btn-group">
+        <a href="{{url_for('user_list')}}" class="btn btn-primary btn-md" role="button">Only followed users</a>
+        <a href="{{url_for('user_list', show='all')}}" class="btn btn-primary btn-md" role="button">All users</a>
+    </div>
 </div>
 
 <div class="container">
     <br>
     {{quick_form(search_form)}}
     <br>
+    {% if no_table %}
+    <h3>You are currently not following other users.</h3>
+    <a href="{{url_for('user_list', show='all')}}" class="btn btn-primary btn-lg" role="button">Show all users!</a>
+    {% else %}
     {{render_pagination(**pagination_kwargs)}}
     <br>
     {{table}}
     <br>
     {{render_pagination(**pagination_kwargs)}}
+    {% endif %}
 </div>
 
 {% endblock %}

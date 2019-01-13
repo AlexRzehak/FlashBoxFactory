@@ -29,12 +29,15 @@ class CardBoxTable(Table):
 class UserTable(Table):
 
     classes = ['table', 'table-hover', 'table-bordered']
+    no_items = ("There are no users matching your criteria! "
+                "Please check your search terms.")
 
     username = LinkCol('Username', endpoint='show_user',
                        url_kwargs=dict(_id='_id'), attr_list='_id')
     score = Col('Score')
-    # following = LinkCol('Username', endpoint='show_user',
-    # url_kwargs=dict(_id='_id'), attr_list='_id', allow_sort=False)
+    following = LinkCol('Following', endpoint='toggle_follow',
+                        url_kwargs=dict(_id='_id'), text_fallback='fail',
+                        allow_sort=False)
     challenge = LinkCol('Challenge', endpoint='challenge',
                         text_fallback='Challenge!', url_kwargs=dict(_id='_id'),
                         allow_sort=False)

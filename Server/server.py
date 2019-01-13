@@ -40,7 +40,8 @@ def index():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico')
 
 
 @app.route('/challenge/<_id>')
@@ -76,7 +77,8 @@ def show_user(_id):
                                user=user,
                                active='profile')
 
-    return render_template('show_user.html', user=user)
+    return render_template('show_user.html', user=user,
+                           following=current_user.is_following(_id))
 
 
 @app.route('/user/settings', methods=['POST', 'GET'])
@@ -101,6 +103,35 @@ def user_settings():
                            password_form=password_form)
 
 
+@app.route('/community/<_id>/toggle-follow')
+@login_required
+def toggle_follow(_id):
+
+    # TODO redirect back to page url with button
+
+    user = User.fetch(db, _id)
+
+    if not user:
+        flash('Invalid User Name.', 'error')
+        return redirect(url_for('index'))
+
+    print(current_user.following)
+
+    current_user.toggle_follow(_id)
+    current_user.store(db)
+
+    print(current_user.following)
+
+    if current_user.is_following(_id):
+        flash(f'Now following {_id}')
+
+        return redirect(url_for('user_list'))
+
+    flash(f'Unfollowed {_id}')
+
+    return redirect(url_for('user_list'))
+
+
 @app.route('/community', methods=['POST', 'GET'])
 @login_required
 def user_list():
@@ -112,6 +143,7 @@ def user_list():
     sort_direction = args.get('direction')
     page = args.get('page')
     filter_term = args.get('fterm')
+    following = args.get('show')
 
     # <-- validate parameters and set fallback values -->
     sort_key_possible = ('username', 'score')
@@ -126,6 +158,10 @@ def user_list():
     # filter_term: filter only applied if non-empty string given (None case)
     # TODO: filter_term validation analogous to tags/user input sanitization
 
+    following_possible = ('following', 'all')
+    following = following if following in following_possible else 'following'
+    following_bool = following == 'following'
+
     page = page or 1  # equals 1 if None; else: stays the same
     try:
         page = int(page)
@@ -139,15 +175,23 @@ def user_list():
 
         kwargs = {key: value for key, value in args.items()}
         kwargs.update(sort=sort_key, direction=sort_direction,
-                      fterm=filter_term, page=1)
+                      fterm=filter_term, show='all', page=1)
 
         return redirect(url_for('user_list', **kwargs))
 
     form.term.data = filter_term
 
-    # TODO show followed users properly
+    users = []
 
-    users = User.fetch_all(db)
+    if following_bool:
+        if not current_user.following:
+            return render_template('community.html', search_form=form,
+                                   active='community', no_table=True)
+
+        for _id in current_user.following:
+            users.append(User.fetch(db, _id))
+    else:
+        users = User.fetch_all(db)
 
     # <-- filter process -->
     if filter_term:
@@ -178,7 +222,7 @@ def user_list():
     # <-- standard values-->
     kwargs = {key: value for key, value in args.items()}
     kwargs.update(sort=sort_key, direction=sort_direction,
-                  fterm=filter_term, page=page)
+                  fterm=filter_term, show=following, page=page)
 
     # <-- creation of dynamic content -->
     pag_kwargs = dict(pagination=pagination, endpoint='user_list',
@@ -215,7 +259,7 @@ def score_list():
     users = User.fetch_all(db)
 
     if users:
-            users.sort(key=lambda u: u.score, reverse=True)
+        users.sort(key=lambda u: u.score, reverse=True)
 
     # <-- pagination -->
     per_page = 50
@@ -242,8 +286,6 @@ def score_list():
     # TODO Show score not retarded
     you = [User.fetch(db, current_user._id)]
     small_table = ScoreTable(you)
-
-    print('lul')
 
     return render_template('scoreboard.html',
                            table=big_table,
@@ -363,20 +405,18 @@ def rate_cardbox(_id):
 
     if not box:
         flash('Invalid Cardbox ID.', 'error')
-        # TODO return to /carboxes/<_id>
         return redirect(url_for('index'))
 
     if box.increment_rating(db, current_user):
         flash('Successfully rated. Thank you for your appreciation! :3')
-        # TODO return to /carboxes/<_id>
         return redirect(url_for('show_box', _id=_id))
 
     flash("Already rated. Don't try to fool us!", 'error')
-    # TODO return to /carboxes/<_id>
     return redirect(url_for('show_box', _id=_id))
 
 
 # TODO filter malevolent input
+# TODO fix error responses
 @app.route('/add_cardbox', methods=['POST'])
 def add_cardbox():
     if not request.is_json:
@@ -486,5 +526,3 @@ def load_user(user_id: str):
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
-    # utils.clean_boxes(db)
-    # utils.clean_users(db)

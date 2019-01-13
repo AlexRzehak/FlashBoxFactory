@@ -61,6 +61,8 @@ def main():
     # print_boxes()
     create_many_boxes(USER, PASSWORD, 1)
     # test_download()
+    # utils.clean_boxes(db)
+    # utils.clean_users(db)
 
 
 if __name__ == "__main__":
