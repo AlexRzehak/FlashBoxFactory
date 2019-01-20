@@ -36,7 +36,7 @@ class UserTable(Table):
                        url_kwargs=dict(_id='_id'), attr_list='_id')
     score = Col('Score')
     following = LinkCol('Following', endpoint='toggle_follow',
-                        url_kwargs=dict(_id='_id'), text_fallback='fail',
+                        url_kwargs=dict(_id='_id'), attr_list='follows_label',
                         allow_sort=False)
     challenge = LinkCol('Challenge', endpoint='challenge',
                         text_fallback='Challenge!', url_kwargs=dict(_id='_id'),

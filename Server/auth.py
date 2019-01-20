@@ -12,13 +12,14 @@ TABLE_USER = 'users'
 class User:
 
     def __init__(self, _id: str, password_hash=None, cardboxs=[], rated=[],
-                 score=0, following=[],
+                 offline_score=0, score=0, following=[],
                  is_active=None, is_authenticated=None, is_anonymous=None):
 
         self._id = _id
         self.password_hash = password_hash
         self.cardboxs = cardboxs
         self.rated = rated
+        self.offline_score = offline_score
         self.score = score
         self.following = following
 

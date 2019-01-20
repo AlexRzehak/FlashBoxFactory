@@ -59,7 +59,21 @@ def show_box(_id):
         flash('Invalid Cardbox ID.', 'error')
         return redirect(url_for('huge_list'))
 
-    return render_template('show_box.html', box=box)
+    owned = box.owner == current_user._id
+
+    return render_template('show_box.html', box=box, owned=owned)
+
+
+@app.route('/cardboxes/<_id>/peek')
+@login_required
+def preview_box(_id):
+    box = CardBox.fetch(db, _id)
+
+    if not box:
+        flash('Invalid Cardbox ID.', 'error')
+        return redirect(url_for('huge_list'))
+
+    return render_template('preview_box.html', box=box)
 
 
 @app.route('/user/<_id>')
@@ -107,29 +121,25 @@ def user_settings():
 @login_required
 def toggle_follow(_id):
 
-    # TODO redirect back to page url with button
-
     user = User.fetch(db, _id)
 
     if not user:
         flash('Invalid User Name.', 'error')
         return redirect(url_for('index'))
 
-    print(current_user.following)
-
     current_user.toggle_follow(_id)
     current_user.store(db)
 
-    print(current_user.following)
+    return_address = request.referrer or url_for('show_user', _id=_id)
 
     if current_user.is_following(_id):
         flash(f'Now following {_id}')
 
-        return redirect(url_for('user_list'))
+        return redirect(return_address)
 
     flash(f'Unfollowed {_id}')
 
-    return redirect(url_for('user_list'))
+    return redirect(return_address)
 
 
 @app.route('/community', methods=['POST', 'GET'])
@@ -183,6 +193,7 @@ def user_list():
 
     users = []
 
+    # <-- distinction: followed users - all users -->
     if following_bool:
         if not current_user.following:
             return render_template('community.html', search_form=form,
@@ -229,7 +240,12 @@ def user_list():
                       prev='<', next='>', ellipses='...', size='lg',
                       args=kwargs)
 
-    table = UserTable(pagination.items,
+    def follow_label_producer(item):
+        return 'Unfollow' if current_user.is_following(item._id) else 'Follow'
+
+    wrapper = utils.LabelTableItemWrapper(dict(follows=follow_label_producer))
+
+    table = UserTable(wrapper(pagination.items),
                       sort_reverse=sort_direction_bool,
                       sort_by=sort_key)
 
@@ -415,6 +431,30 @@ def rate_cardbox(_id):
     return redirect(url_for('show_box', _id=_id))
 
 
+@app.route('/cardboxes/<_id>/delete')
+@login_required
+def delete_cardbox(_id):
+    box = CardBox.fetch(db, _id)
+
+    if not box:
+        flash('Invalid Cardbox ID.', 'error')
+        return redirect(url_for('index'))
+
+    if box._id not in current_user.cardboxs:
+        flash('You can only delete cardboxes that you own.', 'error')
+        return redirect(url_for('show_box', _id=_id))
+
+    CardBox.delete(db, _id)
+
+    current_user.cardboxs.remove(box._id)
+
+    current_user.store(db)
+
+    flash("Successfully removed CardBox")
+    return redirect(url_for('huge_list',
+                            foption='owner', fterm=current_user._id))
+
+
 # TODO filter malevolent input
 # TODO fix error responses
 @app.route('/add_cardbox', methods=['POST'])
@@ -425,7 +465,7 @@ def add_cardbox():
     # already returns dictionary
     payload = request.get_json()
 
-    req = ('username', 'password', 'tags', 'content', 'name')
+    req = ('username', 'password', 'tags', 'content', 'name', 'info')
     if not payload or not all(r in payload for r in req):
         abort(404)
 
@@ -434,13 +474,21 @@ def add_cardbox():
         if not user.check_password(payload['password']):
             abort(404)
 
-        new_box = CardBox(CardBox.gen_card_id(), name=payload['name'],
-                          owner=user._id, rating=0,
+        cardbox_id = CardBox.gen_card_id()
+
+        # 'Update'-Function
+        # TODO contemplate for better solution
+        for box_id in user.cardboxs:
+            if CardBox.fetch(db, box_id).name == payload['name']:
+                cardbox_id = box_id
+            else:
+                user.cardboxs.append(cardbox_id)
+
+        new_box = CardBox(cardbox_id, name=payload['name'],
+                          owner=user._id, rating=0, info=payload['info'],
                           tags=payload['tags'], content=payload['content'])
+
         new_box.store(db)
-
-        user.cardboxs.append(new_box._id)
-
         user.store(db)
 
     return 'OK'

@@ -1,0 +1,20 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+
+{% block title %}Box preview: {{box.name}}{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h2>{{box.name}}</h2>
+    <h3>Preview stuff!!!!!!</h3>
+    <a href="{{url_for('show_box', _id=box._id)}}" class="btn btn-primary btn-md" role="button">Back to Box</a>
+
+</div>
+
+{% endblock %}

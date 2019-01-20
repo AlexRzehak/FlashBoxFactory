@@ -15,22 +15,25 @@
         <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Unfollow</a>
         {% else %}
         <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
-        {% endif %}        
+        {% endif %}
         <a href="{{url_for('challenge', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
     </div>
 </h2>
-<h3 class="container">User Score: {{user.score}}</h3>
-<h3 class="container">SHOWCASE (Achievements mb?)</h3>
-
 <div class="container">
-    <h3>Uploaded Boxes</h3>
-    <ul class="list-group">
-        {% for box_id in user.cardboxs %}
-        <a href="{{url_for('show_box', _id=box_id)}}" class="list-group-item">{{box_id}}</a>
-        {% endfor %}
-    </ul>
+    <h3>User Score: {{user.score}}</h3>
+    <h3>SHOWCASE (Achievements mb?)</h3>
+    <br>
+    <br>
+    <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View this user's CardBoxes!</a>
 </div>
 
 {{flashed_messages(container=True)}}
 
 {% endblock %}
+
+<!-- <h3>Uploaded Boxes</h3>
+    <ul class="list-group">
+        {% for box_id in user.cardboxs %}
+        <a href="{{url_for('show_box', _id=box_id)}}" class="list-group-item">{{box_id}}</a>
+        {% endfor %}
+    </ul> -->

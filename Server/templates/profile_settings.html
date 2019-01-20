@@ -22,9 +22,10 @@
         <h3>Stuff like Achievements!</h3>
         <h3>Change Showcase <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
         <br>
-        <h3>Change Password <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
+        <h3>Change Password</h3>
         {{quick_form(password_form)}}
         <br>
-        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done</a>
+        <br>
+        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done and saved!</a>
     </div>
 {% endblock %}

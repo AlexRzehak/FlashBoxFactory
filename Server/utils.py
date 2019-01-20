@@ -92,3 +92,30 @@ class Pagination:
 
                 yield num
                 last = num
+
+
+class _LabelTableItemContainer:
+
+    def __init__(self, obj: object):
+
+        for attr, val in vars(obj).items():
+            setattr(self, attr, val)
+
+
+class LabelTableItemWrapper:
+
+    def __init__(self, producer_dict: dict):
+        self.producer_dict = producer_dict
+
+    def __call__(self, items):
+        result = []
+
+        for item in items:
+            wrapped_item = _LabelTableItemContainer(item)
+
+            for attr, producer in self.producer_dict.items():
+                setattr(wrapped_item, attr + '_label', producer(wrapped_item))
+
+            result.append(wrapped_item)
+
+        return result

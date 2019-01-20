@@ -10,30 +10,53 @@
 
 {% block content %}
 
-<div class="text-center">
-    <h2>{{box.name}}</h2>
-    <div class="btn-group">
-            <a href="{{url_for('huge_list')}}" class="btn btn-primary btn-md" role="button">Back to explore</a>
-            <a href="{{url_for('prepare_download', _id=box._id)}}" class="btn btn-primary btn-md" role="button">Download!</a></h2>            
+<div class="container">
+
+    <div class="row">
+
+        <div class="col-xs-9">
+            <h2>{{box.name}}</h2>
+            <h3>by <a href="{{url_for('show_user', _id=box.owner)}}">{{box.owner}}</a></h3>
+        </div>
+
+        <div class="col-xs-3">
+            <h2>
+                {% if owned %}
+                <div class="btn-group">
+                    <a href="{{url_for('delete_cardbox', _id=box._id)}}" class="btn btn-danger btn-md" role="button">Delete</a>
+                    <a href="{{url_for('add_cardbox')}}" class="btn btn-primary btn-md disabled" role="button">Edit</a>
+                </div>
+                {% endif %}
+            </h2>
+        </div>
     </div>
+    <div class="btn-group">        
+        <a href="{{url_for('prepare_download', _id=box._id)}}" class="btn btn-info btn-lg" role="button">Download!</a>
+        <a href="{{url_for('preview_box', _id=box._id)}}" class="btn btn-primary btn-lg" role="button">Take a peek!</a>
+    </div>
+
+    <hr>
+    <h3>Rating: {{box.rating}} <a href="{{url_for('rate_cardbox', _id=box._id)}}" class="btn btn-primary btn-md" role="button">Upvote!</a></h3>
+    {{flashed_messages(container=False)}}
+    <hr>
+    <h3>Info:
+        {% for tag in box.tags %}
+        <span class="label label-default">{{tag}}</span>
+        {% endfor %}
+    </h3>
+    <p>{{box.info}}</p>
 </div>
 
-<div class="text-center">    
-    <br>
-    <p>by <a href="{{url_for('show_user', _id=box.owner)}}">{{box.owner}}</a></p>
-    <br>
-    <p>Tags:<br>
-        <ul class="list-inline">
-            {% for tag in box.tags %}
-              <li class="list-group-item">{{tag}}</li>
-            {% endfor %}
-        </ul></p>
-    <br>
-    <p>Rating: {{box.rating}} <a href="{{url_for('rate_cardbox', _id=box._id)}}" class="btn btn-primary btn-md" role="button">Upvote!</a></p>
-    <br>
-    <h3>No Description feature added yet. No content display feature added yet.</h3>
-</div>
 
-{{flashed_messages(container=True)}}
+
+
+<div class="container">
+    <hr>
+    <div class="btn-group btn-group-justified">
+        <a href="{{url_for('prepare_download', _id=box._id)}}" class="btn btn-info btn-lg" role="button">Download!</a>
+    </div>
+    <br>
+    <a href="{{url_for('huge_list')}}" class="btn btn-primary btn-md" role="button">Back to explore!</a>
+</div>
 
 {% endblock %}

@@ -7,11 +7,13 @@ import utils
 TABLE_RATINGS = 'ratings'
 TABLE_CARDBOXES = 'cardboxs'
 
+DEFAULT_INFO = 'No Description feature added yet. No content display feature added yet.'
+
 
 class CardBox:
 
     def __init__(self, _id: str, name: str, owner: str,
-                 rating: int, tags: list, content: list):
+                 rating: int, tags: list, content: list, info=DEFAULT_INFO):
 
         self._id = _id
         self.name = name
@@ -19,6 +21,7 @@ class CardBox:
         self.rating = rating
         self.tags = tags
         self.content = content
+        self.info = info
 
     @staticmethod
     def gen_card_id() -> str:
@@ -53,6 +56,11 @@ class CardBox:
         return True
 
     @staticmethod
+    def delete(db, card_box_id: str):
+        db.hdel(TABLE_CARDBOXES, card_box_id)
+        return True
+
+    @staticmethod
     def fetch(db, card_box_id: str):
         json_string = db.hget(TABLE_CARDBOXES, card_box_id)
 
@@ -74,3 +82,16 @@ class CardBox:
                  for d in dict_json_boxes.values()]
 
         return boxes
+
+
+class Card:
+
+    def __init__(self, _id: str, name: str, question: str,
+                 answers: list, correct_answer: int, explanation: str):
+
+        self._id = _id
+        self.name = name
+        self.question = question
+        self.answers = answers
+        self.correct_answer = correct_answer
+        self.explanation = explanation

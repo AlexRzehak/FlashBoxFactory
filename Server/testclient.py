@@ -18,8 +18,10 @@ TAGS = ['maths', 'physics', 'chemistry', 'music', 'history', 'silent_movies',
 # PASSWORD = 'highground'
 # USER = 'DER MARKUS'
 # PASSWORD = 'wurstbrot'
-USER = 'deppo'
-PASSWORD = 'doofkopp'
+# USER = 'deppo'
+# PASSWORD = 'doofkopp'
+USER = 'Molagsan'
+PASSWORD = 'Zenezane00'
 
 
 def create_many_boxes(username, password, number=100):
@@ -29,14 +31,16 @@ def create_many_boxes(username, password, number=100):
         name = ''.join(random.choice(string.ascii_lowercase)
                        for _ in range(upper))
         tags = random.sample(TAGS, 2)
-        create_sample_box(username, password, name, tags, 'PLACEHOLDER')
+        info = 'A box that makes sense!'
+        create_sample_box(username, password, name, tags, 'PLACEHOLDER', info)
 
 
-def create_sample_box(username, password, name, tags, content):
+def create_sample_box(username, password, name, tags, content, info):
     payload = dict(username=username,
                    password=password,
                    name=name,
                    tags=tags,
+                   info=info,
                    content=content)
     r = requests.post('http://localhost:5000/add_cardbox', json=payload)
 
