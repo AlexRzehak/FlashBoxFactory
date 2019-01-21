@@ -1,5 +1,13 @@
+import os
+import io
 import json
 import math
+import hashlib
+
+from PIL import Image
+from flask import url_for
+from werkzeug.datastructures import FileStorage
+from wtforms.validators import StopValidation
 
 
 def unjsonify(json_string: str):
@@ -119,3 +127,64 @@ class LabelTableItemWrapper:
             result.append(wrapped_item)
 
         return result
+
+
+class FixedImageSize:
+
+    def __init__(self, allowed_w_h_tuples: list, message=None):
+        self.allowed_tuples = allowed_w_h_tuples
+        self.message = message
+
+    def __call__(self, form, field):
+        if not (isinstance(field.data, FileStorage) and field.data):
+            return
+
+        f = field.data
+
+        try:
+            image = Image.open(io.BytesIO(f.stream.read()))
+            # reset to initial position to not 'consume' buffer downstream
+            f.stream.seek(0)
+
+            if image.size in self.allowed_tuples:
+                return
+
+        except:
+            raise StopValidation('An error occured while reading the image.')
+
+        f_text = field.gettext('Image does not fit one of the following '
+                               'dimensions: {}.'
+                               .format(self.allowed_tuples))
+
+        raise StopValidation(self.message or f_text)
+
+
+def sha1_of(string: str):
+    return hashlib.sha1(string.encode('utf-8')).hexdigest()
+
+
+def profile_img_path(app, user: str) -> str or None:
+    profile_filename = sha1_of(user) + '.jpg'
+
+    img_path = os.path.join(app.static_folder, 'img', profile_filename)
+
+    if not os.path.exists(img_path):
+        return None
+
+    return url_for('.static', filename='img/' + profile_filename)
+
+
+def delete_profile_img(app, user: str):
+    if profile_img_path(app, user) is None:
+        return
+
+    profile_filename = sha1_of(user) + '.jpg'
+    img_path = os.path.join(app.static_folder, 'img', profile_filename)
+
+    os.remove(img_path)
+
+
+def save_file_field_img(field, filepath: str):
+    with Image.open(io.BytesIO(field.data.read())) as image:
+        rgb_image = image.convert('RGB')
+        rgb_image.save(filepath)

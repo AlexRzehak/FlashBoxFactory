@@ -4,3 +4,4 @@ flask_wtf
 flask_table
 flask_bootstrap
 redis
+pillow

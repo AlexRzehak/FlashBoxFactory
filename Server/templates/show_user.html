@@ -2,6 +2,11 @@
 
 {% from "bootstrap/utils.html" import flashed_messages %}
 
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{url_for('.static', filename='mystyle.css')}}">
+{% endblock %}
+
 {% block title %}User: {{user._id}}{% endblock %}
 
 {% block navbar %}
@@ -9,25 +14,34 @@
 {% endblock %}
 
 {% block content %}
-<p class="container">profile-pic</p>
-<h2 class="container">{{user._id}} <div class="btn-group">
-        {% if following %}
-        <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Unfollow</a>
+{{flashed_messages(container=True)}}
+
+<div class="container">
+    <h2>{% if picture_filepath %}
+        <img src="{{picture_filepath}}">
         {% else %}
-        <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
+        <img src="{{url_for('.static', filename='default_pic.png')}}">
         {% endif %}
-        <a href="{{url_for('challenge', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
-    </div>
-</h2>
+        {{user._id}} <div class="btn-group">
+            {% if following %}
+            <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Unfollow</a>
+            {% else %}
+            <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
+            {% endif %}
+            <a href="{{url_for('challenge', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
+        </div>
+    </h2>
+</div>
+
+
 <div class="container">
     <h3>User Score: {{user.score}}</h3>
     <h3>SHOWCASE (Achievements mb?)</h3>
     <br>
     <br>
-    <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View this user's CardBoxes!</a>
+    <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
+        this user's CardBoxes!</a>
 </div>
-
-{{flashed_messages(container=True)}}
 
 {% endblock %}
 

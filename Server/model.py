@@ -61,16 +61,24 @@ class CardBox:
         return True
 
     @staticmethod
-    def fetch(db, card_box_id: str):
-        json_string = db.hget(TABLE_CARDBOXES, card_box_id)
+    def fetch(db, *card_box_ids):
+        if not card_box_ids:
+            return []
 
-        if not json_string:
+        json_strings = db.hmget(TABLE_CARDBOXES, *card_box_ids)
+
+        if not json_strings:
             return None
 
-        _dict = utils.unjsonify(json_string)
-        return CardBox(**_dict)
+        if len(json_strings) == 1:
+            _dict = utils.unjsonify(json_strings[0])
+            return CardBox(**_dict)
+
+        return [CardBox(**utils.unjsonify(json_string))
+                for json_string in json_strings]
 
     # TODO Add implementation that does not crash with too much data
+
     @staticmethod
     def fetch_all(db):
         dict_json_boxes = db.hgetall(TABLE_CARDBOXES)

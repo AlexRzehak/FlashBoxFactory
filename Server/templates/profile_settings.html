@@ -3,6 +3,11 @@
 {% from "bootstrap/utils.html" import flashed_messages %}
 {%from "bootstrap/wtf.html" import quick_form %}
 
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{url_for('.static', filename='mystyle.css')}}">
+{% endblock %}
+
 {% block title %}Profile Settings{% endblock %}
 
 {% block navbar %}
@@ -11,21 +16,38 @@
 
 {% block content %}
 
-{{flashed_messages(container=True)}}
-
 <h2 class="container">Editing profile of {{user._id}}</h2>
 
-    <div class="container">
-        <p>profile-pic</p>
-        <h3>Change Profile Picture <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
-        <br>
-        <h3>Stuff like Achievements!</h3>
-        <h3>Change Showcase <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
-        <br>
-        <h3>Change Password</h3>
-        {{quick_form(password_form)}}
-        <br>
-        <br>
-        <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done and saved!</a>
-    </div>
+{{flashed_messages(container=True)}}
+
+<div class="container">
+
+    <h3>Change Profile Picture</h3>
+    {% if picture_filepath %}
+    <img src="{{picture_filepath}}">
+    {% else %}
+    <h4>You have not profile picture yet.</h4>
+    {% endif %}
+    <form action="" method="POST" enctype="multipart/form-data">
+        {{picture_form.hidden_tag()}}
+        <div class="form-group">
+            {{ picture_form.picture.label }}
+            {{ picture_form.picture }}
+            <br>
+            <input type="submit" value="Save" class='btn btn-primary'>
+    </form>
+
+    <br>
+    <hr>
+    <h3>Change Showcase <button type="button" class="btn btn-primary btn-md disabled">Save</button></h3>
+    <h3>Stuff like Achievements!</h3>
+    <br>
+    <hr>
+    <h3>Change Password</h3>
+    {{quick_form(password_form)}}
+    <br>
+    <br>
+    <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done and
+        saved!</a>
+</div>
 {% endblock %}

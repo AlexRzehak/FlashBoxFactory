@@ -4,6 +4,7 @@ from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Le
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import utils
+from model import CardBox
 
 
 TABLE_USER = 'users'
@@ -12,7 +13,7 @@ TABLE_USER = 'users'
 class User:
 
     def __init__(self, _id: str, password_hash=None, cardboxs=[], rated=[],
-                 offline_score=0, score=0, following=[],
+                 offline_score=0, score=0, following=[], showcase_info=None,
                  is_active=None, is_authenticated=None, is_anonymous=None):
 
         self._id = _id
@@ -20,12 +21,27 @@ class User:
         self.cardboxs = cardboxs
         self.rated = rated
         self.offline_score = offline_score
-        self.score = score
         self.following = following
+        self.showcase_info = showcase_info or dict(info='', cardbox='',
+                                                   show_info=False,
+                                                   show_cardbox=False,
+                                                   show_rank=False)
+        # self.showcase = showcase or Showcase({}, '', '')
+
+        # TODO: clean DB if removed
+        self.score = score
 
         self.is_active = True
         self.is_authenticated = True
         self.is_anonymous = False
+
+    # TODO: look at me, I'm new!
+    def get_score(self, db):
+        return db.zscore('score', self._id)
+
+    # TODO: look at me, I'm new!
+    def get_rank(self, db):
+        return db.zrank('score', self._id)
 
     def get_id(self) -> str:
         return self._id
@@ -39,10 +55,6 @@ class User:
     def store(self, db):
         db.hset(TABLE_USER, self._id, utils.jsonify(self))
 
-    def update_score(self) -> int:
-        # TODO implement function
-        pass
-
     def toggle_follow(self, _id):
         if (_id in self.following):
             self.following.remove(_id)
@@ -50,17 +62,61 @@ class User:
             self.following.append(_id)
 
     def is_following(self, _id):
-            return (_id in self.following)
+        return (_id in self.following)
+
+    # TODO: look at me, I'm new!
+    @staticmethod
+    def top_users(db, _from=0, to=-1, reverse=True):
+        top_ids = [(uid.decode('utf-8'), score)
+                   for uid, score in db.zrange('score', _from, to,
+                                               desc=reverse,
+                                               withscores=True)]
+
+        return top_ids
 
     @staticmethod
-    def fetch(db, user_id: str):
-        json_string = db.hget(TABLE_USER, user_id)
+    def update_score(db, _id) -> int:
+        user = User.fetch(db, _id)
 
-        if not json_string:
+        score_likes = 0
+
+        boxes = CardBox.fetch(db, *user.cardboxs)
+        for box in boxes:
+            score_likes = score_likes + box.rating
+
+        score_followers = 0
+
+        users = User.fetch_all(db)
+        for u in users:
+            if u.is_following(user._id):
+                score_followers += 1
+
+        score_boxes = len(user.cardboxs)
+
+        score = (user.offline_score + score_likes * 100 +
+                 score_followers * 200 + score_boxes * 100)
+
+        user.score = score
+        user.store(db)
+
+        return score
+
+    @staticmethod
+    def fetch(db, *user_ids):
+        if not user_ids:
+            return []
+
+        json_strings = db.hmget(TABLE_USER, *user_ids)
+
+        if not json_strings:
             return None
 
-        _dict = utils.unjsonify(json_string)
-        return User(**_dict)
+        if len(json_strings) == 1:
+            _dict = utils.unjsonify(json_strings[0])
+            return User(**_dict)
+
+        return [User(**utils.unjsonify(json_string))
+                for json_string in json_strings]
 
     # TODO Add implementation that does not crash with too much data
     @staticmethod
@@ -78,6 +134,14 @@ class User:
     @staticmethod
     def exists(db, user_id: str) -> bool:
         return db.hexists(TABLE_USER, user_id)
+
+
+class Showcase:
+    def __init__(self, show: dict, info: str, cardbox: str):
+
+        self.show = show
+        self.info = info
+        self.cardbox = cardbox
 
 
 class RegistrationForm(FlaskForm):

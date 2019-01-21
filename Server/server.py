@@ -9,9 +9,12 @@ from werkzeug.urls import url_parse
 
 import utils
 from model import CardBox
-from auth import User, RegistrationForm, LoginForm, ChangePasswordForm
-from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm
+from user import User, Showcase, RegistrationForm, LoginForm, ChangePasswordForm
+from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm
 
+
+SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
+                     'ebfcdfe412e93f8c5d38e455')
 
 app = Flask(__name__)
 app.secret_key = ('34c059badbbd38455b4eb44865c25303'
@@ -79,25 +82,82 @@ def preview_box(_id):
 @app.route('/user/<_id>')
 @login_required
 def show_user(_id):
-    user = User.fetch(db, _id)
-
-    if not user:
+    if not User.exists(db, _id):
         flash('Invalid User Name.'
               'Be the first User to have this name! :D', 'error')
         return redirect(url_for('index'))
 
+    User.update_score(db, _id)
+
+    user = User.fetch(db, _id)
+    picture_filepath = utils.profile_img_path(app, user._id)
+
     if user._id == current_user._id:
         return render_template('show_user_myself.html',
                                user=user,
+                               picture_filepath=picture_filepath,
                                active='profile')
 
     return render_template('show_user.html', user=user,
+                           picture_filepath=picture_filepath,
                            following=current_user.is_following(_id))
 
 
 @app.route('/user/settings', methods=['POST', 'GET'])
 @login_required
 def user_settings():
+
+    # <-- Change profile picture -->
+    picture_form = PictureForm()
+
+    if picture_form.validate_on_submit():
+        filename = utils.sha1_of(current_user._id) + '.jpg'
+        filepath = os.path.join(app.static_folder, 'img', filename)
+
+        utils.save_file_field_img(picture_form.picture, filepath)
+
+        flash('Successfully changed profile picture!')
+
+        return(redirect(url_for('user_settings')))
+
+    elif picture_form.is_submitted():
+        for message in picture_form.picture.errors:
+            flash(message, category='error')
+
+        return(redirect(url_for('user_settings')))
+
+    picture_filepath = utils.profile_img_path(app, current_user._id)
+
+    # # <-- Change Showcase -->
+    # boxes = [CardBox.fetch(db, box_id) for box_id in current_user.cardboxs]
+
+    # showcase_form = ShowcaseForm()
+    # showcase_form.cardbox_input.choices = [(b._id, b.name) for b in boxes]
+
+    # if showcase_form.validate_on_submit():
+    #     new_showcase = Showcase({'info': showcase_form.check_info.data,
+    #                              'cardbox': showcase_form.check_cardbox.data,
+    #                              'rank': showcase_form.check_rank.data},
+    #                             showcase_form.info_input.data,
+    #                             showcase_form.cardbox_input.data)
+
+    #     current_user.showcase = new_showcase
+    #     current_user.store(db)
+
+    #     flash('Showcase adjusted!')
+
+    #     return redirect(url_for('user_settings'))
+
+    # u_showcase = current_user.showcase
+    # if not u_showcase.show:
+    #     u_showcase.show = {'info': False, 'cardbox': False, 'rank': False}
+    # showcase_form.check_info.data = u_showcase.show['info']
+    # showcase_form.info_input.data = u_showcase.info
+    # showcase_form.check_cardbox.data = u_showcase.show['cardbox']
+    # # showcase_form.info_input.data = u_showcase.info
+    # showcase_form.check_rank.data = u_showcase.show['rank']
+
+    # <-- Change Password -->
     password_form = ChangePasswordForm()
 
     if password_form.validate_on_submit():
@@ -114,7 +174,10 @@ def user_settings():
         return redirect(url_for('user_settings'))
 
     return render_template('profile_settings.html', user=current_user,
-                           password_form=password_form)
+                           picture_form=picture_form,
+                           password_form=password_form,
+                           picture_filepath=picture_filepath)
+    # showcase_form=showcase_form)
 
 
 @app.route('/community/<_id>/toggle-follow')
@@ -129,6 +192,7 @@ def toggle_follow(_id):
 
     current_user.toggle_follow(_id)
     current_user.store(db)
+    User.update_score(db, current_user._id)
 
     return_address = request.referrer or url_for('show_user', _id=_id)
 
@@ -191,16 +255,13 @@ def user_list():
 
     form.term.data = filter_term
 
-    users = []
-
     # <-- distinction: followed users - all users -->
     if following_bool:
         if not current_user.following:
             return render_template('community.html', search_form=form,
                                    active='community', no_table=True)
 
-        for _id in current_user.following:
-            users.append(User.fetch(db, _id))
+        users = User.fetch(db, *current_user.following)
     else:
         users = User.fetch_all(db)
 
@@ -366,7 +427,11 @@ def huge_list():
     # <-- filter process -->
     # checks for filter_option = 'tags' if term exists in tag list
     # checks for filter_option = 'name', 'owner' if term is part of string
-    if filter_term:
+    if filter_option == 'name' or filter_option == 'owner':
+        cardboxes = [box for box in cardboxes
+                     if filter_term.lower()
+                     in getattr(box, filter_option).lower()]
+    elif filter_term:
         cardboxes = [box for box in cardboxes
                      if filter_term in getattr(box, filter_option)]
 
@@ -424,6 +489,7 @@ def rate_cardbox(_id):
         return redirect(url_for('index'))
 
     if box.increment_rating(db, current_user):
+        User.update_score(db, box.owner)
         flash('Successfully rated. Thank you for your appreciation! :3')
         return redirect(url_for('show_box', _id=_id))
 
@@ -449,6 +515,7 @@ def delete_cardbox(_id):
     current_user.cardboxs.remove(box._id)
 
     current_user.store(db)
+    User.update_score(db, current_user._id)
 
     flash("Successfully removed CardBox")
     return redirect(url_for('huge_list',
@@ -478,11 +545,14 @@ def add_cardbox():
 
         # 'Update'-Function
         # TODO contemplate for better solution
-        for box_id in user.cardboxs:
-            if CardBox.fetch(db, box_id).name == payload['name']:
-                cardbox_id = box_id
-            else:
-                user.cardboxs.append(cardbox_id)
+        boxes = CardBox.fetch(db, *user.cardboxes)
+
+        for box in boxes:
+            if box.name == payload['name']:
+                cardbox_id = box._id
+                break
+        else:
+            user.cardboxs.append(cardbox_id)
 
         new_box = CardBox(cardbox_id, name=payload['name'],
                           owner=user._id, rating=0, info=payload['info'],
@@ -490,6 +560,37 @@ def add_cardbox():
 
         new_box.store(db)
         user.store(db)
+        User.update_score(db, user._id)
+
+    return 'OK'
+
+
+# TODO filter malevolent input
+# TODO fix error responses
+@app.route('/sync_user_score', methods=['POST'])
+def sync_score():
+    if not request.is_json:
+        abort(404)
+
+    # already returns dictionary
+    payload = request.get_json()
+
+    req = ('username', 'password', 'secret', 'score')
+    if not payload or not all(r in payload for r in req):
+        abort(404)
+
+    if not payload['secret'] == SCORE_SYNC_SECRET:
+        abort(404)
+
+    if User.exists(db, payload['username']):
+        user = User.fetch(db, payload['username'])
+        if not user.check_password(payload['password']):
+            abort(404)
+
+        user.offline_score = payload['score']
+        user.store(db)
+
+        User.update_score(db, user._id)
 
     return 'OK'
 

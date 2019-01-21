@@ -1,9 +1,11 @@
 import json
 import random
+import string
 import requests
 
-import string
 import redis
+
+from server import SCORE_SYNC_SECRET
 
 # A test client to check out multiple functionalities
 # of the server and get data to the server
@@ -22,6 +24,8 @@ TAGS = ['maths', 'physics', 'chemistry', 'music', 'history', 'silent_movies',
 # PASSWORD = 'doofkopp'
 USER = 'Molagsan'
 PASSWORD = 'Zenezane00'
+# USER = 'Ainz'
+# PASSWORD = 'skurleton'
 
 
 def create_many_boxes(username, password, number=100):
@@ -45,6 +49,14 @@ def create_sample_box(username, password, name, tags, content, info):
     r = requests.post('http://localhost:5000/add_cardbox', json=payload)
 
 
+def sample_user_score(username, password, score, secret):
+    payload = dict(username=username,
+                   password=password,
+                   score=score,
+                   secret=secret)
+    r = requests.post('http://localhost:5000/sync_user_score', json=payload)
+
+
 def test_download():
     r = requests.get(
         'http://localhost:5000/cardboxes/iqPLZZxkQKeAYEIWBVyDgA==/download')
@@ -63,7 +75,8 @@ def print_users():
 
 def main():
     # print_boxes()
-    create_many_boxes(USER, PASSWORD, 1)
+    create_many_boxes(USER, PASSWORD, 12)
+    # sample_user_score(USER, PASSWORD, 400, SCORE_SYNC_SECRET)
     # test_download()
     # utils.clean_boxes(db)
     # utils.clean_users(db)

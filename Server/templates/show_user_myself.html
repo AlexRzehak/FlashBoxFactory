@@ -2,6 +2,11 @@
 
 {% from "bootstrap/utils.html" import flashed_messages %}
 
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{url_for('.static', filename='mystyle.css')}}">
+{% endblock %}
+
 {% block title %}Your Profile{% endblock %}
 
 {% block navbar %}
@@ -18,12 +23,21 @@
 </div> -->
 
 
-<p class="container">profile-pic</p>
-<h2 class="container">{{user._id}} <a href="{{url_for('user_settings')}}" class="btn btn-primary btn-md" role="button">Profile Settings</a></h2>
-<h3 class="container">Youre Score: {{user.score}}</h3>
-<h3 class="container">Here you can look at all your stuff.<br>
-    Or you can change the stuff you show people!<br>
-    Like Achievements!</h3>
+<div class="container">
+    <h2>{% if picture_filepath %}
+        <img src="{{picture_filepath}}">
+        {% else %}
+        <img src="{{url_for('.static', filename='default_pic.png')}}">
+        {% endif %}
+        {{user._id}} <a href="{{url_for('user_settings')}}" class="btn btn-primary btn-md" role="button">Profile
+            Settings</a>
+    </h2>
+    <h3>Your Score: {{user.score}}</h3>
+    <h3>Here you can look at all your stuff.<br>
+        Or you can change the stuff you show people!<br>
+        Like Achievements!</h3>
+</div>
+
 
 {{flashed_messages(container=True)}}
 
@@ -31,8 +45,9 @@
     <br>
     <br>
     <div class="btn-group">
-            <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View your CardBoxes!</a>
-            <button type="button" class="btn btn-primary btn-lg disabled">Upload CardBox</button>
+        <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
+            your CardBoxes!</a>
+        <button type="button" class="btn btn-primary btn-lg disabled">Upload CardBox</button>
     </div>
 </div>
 {% endblock %}

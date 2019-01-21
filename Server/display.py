@@ -1,7 +1,10 @@
 from flask import url_for, request
 from flask_wtf import FlaskForm
-from wtforms import RadioField, SubmitField, StringField
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from flask_table import Table, Col, LinkCol
+from wtforms import RadioField, SubmitField, StringField, BooleanField, SelectField, TextAreaField
+
+import utils
 
 
 class CardBoxTable(Table):
@@ -77,3 +80,23 @@ class CommunityForm(FlaskForm):
 
     term = StringField('Look for a user!')
     submit = SubmitField('Go!')
+
+
+class ShowcaseForm(FlaskForm):
+
+    check_info = BooleanField('Display your Info?')
+    info_input = TextAreaField('What you want to tell this world:')
+    check_cardbox = BooleanField('Display your favourite CardBox?')
+    cardbox_input = SelectField('Your favourite CardBox:')
+    check_rank = BooleanField('Display your current Rank?')
+    submit = SubmitField('Save!')
+
+
+class PictureForm(FlaskForm):
+
+    picture = FileField('Profile picture',
+                        validators=[FileRequired(),
+                                    FileAllowed(['jpg', 'png'],
+                                                'JPG, PNG images only!'),
+                                    utils.FixedImageSize([(256, 256)],
+                                                         '256x256px only!')])
