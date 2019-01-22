@@ -14,14 +14,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- <div class="container">
-    <div class="btn-group">
-        <a href="{{url_for('index')}}" class="btn btn-primary btn-md" role="button">Start</a>
-        <a href="{{url_for('logout')}}" class="btn btn-primary btn-md" role="button">Logout</a>
-        <button type="button" class="btn btn-primary btn-md disabled">User Settings</button>
-    </div>
-</div> -->
-
+{{flashed_messages(container=True)}}
 
 <div class="container">
     <h2>{% if picture_filepath %}
@@ -32,16 +25,28 @@
         {{user._id}} <a href="{{url_for('user_settings')}}" class="btn btn-primary btn-md" role="button">Profile
             Settings</a>
     </h2>
-    <h3>Your Score: {{user.score}}</h3>
-    <h3>Here you can look at all your stuff.<br>
-        Or you can change the stuff you show people!<br>
-        Like Achievements!</h3>
 </div>
 
-
-{{flashed_messages(container=True)}}
-
 <div class="container">
+    <h3>Your Score: {{user.score}}</h3>
+    <hr>
+    {% if not (showcase['info'] or showcase['cardbox'] or showcase['rank'])%}
+    <h4>Create a Showcase for your profile <a href="{{url_for('user_settings')}}">here</a>!</h4>
+    {% endif %}
+    {% if showcase['info']%}
+    <h4>About me:</h4>
+    <p>{{showcase['info']}}</p>
+    {% endif %}
+    {% if showcase['rank']%}
+    <h4>My global rank: {{ showcase['rank'] }}</h4>
+    {% endif %}
+    {% if showcase['cardbox'] %}
+    {% if showcase['cardbox'] == 'string'%}
+    <p>You have to choose a valid CardBox to display first!</p>
+    {% else %}
+    <h4>My best CardBox: <a href="{{url_for('show_box', _id=showcase['cardbox']._id)}}">{{showcase['cardbox'].name}}</a></h4>
+    {% endif %}    
+    {% endif %}    
     <br>
     <br>
     <div class="btn-group">

@@ -8,7 +8,7 @@ from flask_bootstrap import Bootstrap
 from werkzeug.urls import url_parse
 
 import utils
-from model import CardBox
+from model import CardBox, Card
 from user import User, Showcase, RegistrationForm, LoginForm, ChangePasswordForm
 from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm
 
@@ -92,14 +92,31 @@ def show_user(_id):
     user = User.fetch(db, _id)
     picture_filepath = utils.profile_img_path(app, user._id)
 
+    # <-- Showcase -->
+    showcase = dict(info=False, cardbox=False, rank=False)
+
+    infocase = user.showcase_info
+    if infocase['show_info']:
+        showcase['info'] = infocase['info']
+    if infocase['show_cardbox']:
+        box = CardBox.fetch(db, infocase['cardbox'])
+        if box:
+            showcase['cardbox'] = box
+        else:
+            showcase['cardbox'] = 'string'
+    if infocase['show_rank']:
+        showcase['rank'] = user.get_rank(db)
+
+    # <-- my own profile? -->
     if user._id == current_user._id:
         return render_template('show_user_myself.html',
-                               user=user,
+                               user=user, showcase=showcase,
                                picture_filepath=picture_filepath,
                                active='profile')
 
     return render_template('show_user.html', user=user,
                            picture_filepath=picture_filepath,
+                           showcase=showcase,
                            following=current_user.is_following(_id))
 
 
@@ -110,7 +127,7 @@ def user_settings():
     # <-- Change profile picture -->
     picture_form = PictureForm()
 
-    if picture_form.validate_on_submit():
+    if picture_form.submit.data and picture_form.validate_on_submit():
         filename = utils.sha1_of(current_user._id) + '.jpg'
         filepath = os.path.join(app.static_folder, 'img', filename)
 
@@ -120,7 +137,7 @@ def user_settings():
 
         return(redirect(url_for('user_settings')))
 
-    elif picture_form.is_submitted():
+    elif picture_form.submit.data and picture_form.is_submitted():
         for message in picture_form.picture.errors:
             flash(message, category='error')
 
@@ -128,39 +145,41 @@ def user_settings():
 
     picture_filepath = utils.profile_img_path(app, current_user._id)
 
-    # # <-- Change Showcase -->
-    # boxes = [CardBox.fetch(db, box_id) for box_id in current_user.cardboxs]
+    # <-- Change Showcase -->
+    boxes = CardBox.fetch_multiple(db, current_user.cardboxs)
 
-    # showcase_form = ShowcaseForm()
-    # showcase_form.cardbox_input.choices = [(b._id, b.name) for b in boxes]
+    showcase_form = ShowcaseForm()
+    choices = [(b._id, b.name) for b in boxes]
+    choices = [('', '---')] + choices
+    showcase_form.cardbox_input.choices = choices
 
-    # if showcase_form.validate_on_submit():
-    #     new_showcase = Showcase({'info': showcase_form.check_info.data,
-    #                              'cardbox': showcase_form.check_cardbox.data,
-    #                              'rank': showcase_form.check_rank.data},
-    #                             showcase_form.info_input.data,
-    #                             showcase_form.cardbox_input.data)
+    if (showcase_form.submit_showcase.data and
+            showcase_form.validate_on_submit()):
+        new_showcase = dict(info=showcase_form.info_input.data,
+                            cardbox=showcase_form.cardbox_input.data,
+                            show_info=showcase_form.check_info.data,
+                            show_cardbox=showcase_form.check_cardbox.data,
+                            show_rank=showcase_form.check_rank.data)
 
-    #     current_user.showcase = new_showcase
-    #     current_user.store(db)
+        current_user.showcase_info = new_showcase
+        current_user.store(db)
 
-    #     flash('Showcase adjusted!')
+        flash('Showcase adjusted!')
 
-    #     return redirect(url_for('user_settings'))
+        return redirect(url_for('user_settings'))
 
-    # u_showcase = current_user.showcase
-    # if not u_showcase.show:
-    #     u_showcase.show = {'info': False, 'cardbox': False, 'rank': False}
-    # showcase_form.check_info.data = u_showcase.show['info']
-    # showcase_form.info_input.data = u_showcase.info
-    # showcase_form.check_cardbox.data = u_showcase.show['cardbox']
-    # # showcase_form.info_input.data = u_showcase.info
-    # showcase_form.check_rank.data = u_showcase.show['rank']
+    showcase_form.check_info.data = current_user.showcase_info['show_info']
+    showcase_form.info_input.data = current_user.showcase_info['info']
+    showcase_form.check_cardbox.data = current_user.showcase_info['show_cardbox']
+    showcase_form.cardbox_input.data = current_user.showcase_info['cardbox']
+    showcase_form.check_rank.data = current_user.showcase_info['show_rank']
+    showcase_form.rank_token.data = current_user.get_rank(db)
 
     # <-- Change Password -->
     password_form = ChangePasswordForm()
 
-    if password_form.validate_on_submit():
+    if (password_form.submit_password.data and
+            password_form.validate_on_submit()):
 
         if not current_user.check_password(password_form.old_password.data):
             flash('Old passwort not correct.', 'error')
@@ -175,6 +194,7 @@ def user_settings():
 
     return render_template('profile_settings.html', user=current_user,
                            picture_form=picture_form,
+                           showcase_form=showcase_form,
                            password_form=password_form,
                            picture_filepath=picture_filepath)
     # showcase_form=showcase_form)
@@ -261,7 +281,7 @@ def user_list():
             return render_template('community.html', search_form=form,
                                    active='community', no_table=True)
 
-        users = User.fetch(db, *current_user.following)
+        users = User.fetch_multiple(db, current_user.following)
     else:
         users = User.fetch_all(db)
 
@@ -497,9 +517,10 @@ def rate_cardbox(_id):
     return redirect(url_for('show_box', _id=_id))
 
 
+# TODO MAKE WÖRK!
 @app.route('/cardboxes/<_id>/delete')
 @login_required
-def delete_cardbox(_id):
+def delete_cardbox(_id, methods=['POST', 'GET']):
     box = CardBox.fetch(db, _id)
 
     if not box:
@@ -510,42 +531,92 @@ def delete_cardbox(_id):
         flash('You can only delete cardboxes that you own.', 'error')
         return redirect(url_for('show_box', _id=_id))
 
-    CardBox.delete(db, _id)
+    if request.method == 'POST':
+        if request.args.get('del') == 'yes':
+            CardBox.delete(db, _id)
 
-    current_user.cardboxs.remove(box._id)
+            current_user.cardboxs.remove(box._id)
 
-    current_user.store(db)
-    User.update_score(db, current_user._id)
+            current_user.store(db)
+            User.update_score(db, current_user._id)
 
-    flash("Successfully removed CardBox")
-    return redirect(url_for('huge_list',
-                            foption='owner', fterm=current_user._id))
+            flash("Successfully removed CardBox")
+            return redirect(url_for('huge_list',
+                                    foption='owner', fterm=current_user._id))
+        return redirect(url_for('show_box', _id=_id))
+    return render_template('_confirm.html', message=message, address='delete_cardbox')
 
 
-# TODO filter malevolent input
 # TODO fix error responses
 @app.route('/add_cardbox', methods=['POST'])
 def add_cardbox():
     if not request.is_json:
+        print('not json')
         abort(404)
 
     # already returns dictionary
     payload = request.get_json()
 
+    # <-- validate payload -->
     req = ('username', 'password', 'tags', 'content', 'name', 'info')
     if not payload or not all(r in payload for r in req):
+        print('missing key in payload')
         abort(404)
 
+    # None check
+    if any(payload[key] is None for key in req):
+        print('key is None')
+        print('(also: Obama is gone!)')
+        abort(404)
+
+    # type check
+    if not all([isinstance(payload['tags'], list),
+                isinstance(payload['name'], str),
+                isinstance(payload['info'], str)]):
+        print('key wrong type')
+        abort(404)
+
+    if any(' ' in tag for tag in payload['tags']):
+        print('whitespace in tag')
+        abort(404)
+
+    # <-- validate content -->
+    if not isinstance(payload['content'], list):
+        print('content not list')
+        abort(404)
+
+    attrs = ('question', 'answers', 'correct_answer', 'explanation')
+    if not all(a in _dict for a in attrs for _dict in payload['content']):
+        print('missing key in card')
+        abort(404)
+
+    number_of_answers = 3
+
+    for card in payload['content']:
+
+        q, a, ca, e = (card['question'], card['answers'],
+                       card['correct_answer'], card['explanation'])
+
+        if not isinstance(q, str) or not isinstance(e, str):
+            abort(404)
+
+        if not (isinstance(a, list) and len(a) == number_of_answers):
+            abort(404)
+
+        if not (isinstance(ca, int) and ca in range(number_of_answers)):
+            abort(404)
+
+    # check authorization
     if User.exists(db, payload['username']):
         user = User.fetch(db, payload['username'])
         if not user.check_password(payload['password']):
+            print('unauthorized')
             abort(404)
 
         cardbox_id = CardBox.gen_card_id()
 
         # 'Update'-Function
-        # TODO contemplate for better solution
-        boxes = CardBox.fetch(db, *user.cardboxes)
+        boxes = CardBox.fetch_multiple(db, user.cardboxs)
 
         for box in boxes:
             if box.name == payload['name']:
@@ -554,9 +625,14 @@ def add_cardbox():
         else:
             user.cardboxs.append(cardbox_id)
 
+        # store content in separate redis table
+        Card.save_content(db, cardbox_id, payload['content'])
+
+        # create CardBox object for metadata
+        # TODO remove content=None after clearing database
         new_box = CardBox(cardbox_id, name=payload['name'],
                           owner=user._id, rating=0, info=payload['info'],
-                          tags=payload['tags'], content=payload['content'])
+                          tags=payload['tags'], content=None)
 
         new_box.store(db)
         user.store(db)
@@ -607,7 +683,11 @@ def download_cardbox(_id: str):
     if not box:
         abort(404)
 
-    return jsonify(vars(box))
+    content = Card.fetch_content_to_list(db, _id)
+    vars_box = vars(box)
+    vars_box['content'] = content
+
+    return jsonify(vars_box)
 
 
 @app.route('/register', methods=['GET', 'POST'])

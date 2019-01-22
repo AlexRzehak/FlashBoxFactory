@@ -23,7 +23,7 @@
             <h2>
                 {% if owned %}
                 <div class="btn-group">
-                    <a href="{{url_for('delete_cardbox', _id=box._id)}}" class="btn btn-danger btn-md" role="button">Delete</a>
+                    <a href="{{url_for('delete_cardbox', _id=box._id)}}" class="btn btn-danger btn-md disabled" role="button">Delete</a>
                     <a href="{{url_for('add_cardbox')}}" class="btn btn-primary btn-md disabled" role="button">Edit</a>
                 </div>
                 {% endif %}

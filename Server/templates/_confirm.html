@@ -1,0 +1,22 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+
+{% block title %}Confirm Action{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>{{message}}</h2>
+
+    <form action="{{url_for('', user=USER_NAME)}}" method="POST">
+        <input type="submit" value="Delete Pic" class='btn btn-warning'>
+    </form>
+</div>
+
+{% endblock %}

@@ -2,7 +2,7 @@ from flask import url_for, request
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from flask_table import Table, Col, LinkCol
-from wtforms import RadioField, SubmitField, StringField, BooleanField, SelectField, TextAreaField
+from wtforms import RadioField, SubmitField, StringField, BooleanField, SelectField, TextAreaField, IntegerField
 
 import utils
 
@@ -87,9 +87,11 @@ class ShowcaseForm(FlaskForm):
     check_info = BooleanField('Display your Info?')
     info_input = TextAreaField('What you want to tell this world:')
     check_cardbox = BooleanField('Display your favourite CardBox?')
-    cardbox_input = SelectField('Your favourite CardBox:')
+    cardbox_input = SelectField('Your best CardBox:')
     check_rank = BooleanField('Display your current Rank?')
-    submit = SubmitField('Save!')
+    rank_token = IntegerField('You are currently rank',
+                              render_kw={'readonly': True})
+    submit_showcase = SubmitField('Change')
 
 
 class PictureForm(FlaskForm):
@@ -100,3 +102,4 @@ class PictureForm(FlaskForm):
                                                 'JPG, PNG images only!'),
                                     utils.FixedImageSize([(256, 256)],
                                                          '256x256px only!')])
+    submit = SubmitField('Change')

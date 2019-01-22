@@ -1,11 +1,14 @@
+import json
 import uuid
 import base64
+
 
 import utils
 
 
 TABLE_RATINGS = 'ratings'
 TABLE_CARDBOXES = 'cardboxs'
+TABLE_CONTENT = 'cards'
 
 DEFAULT_INFO = 'No Description feature added yet. No content display feature added yet.'
 
@@ -20,8 +23,10 @@ class CardBox:
         self.owner = owner
         self.rating = rating
         self.tags = tags
-        self.content = content
         self.info = info
+
+        # TODO to be deleted
+        self.content = content
 
     @staticmethod
     def gen_card_id() -> str:
@@ -61,18 +66,26 @@ class CardBox:
         return True
 
     @staticmethod
-    def fetch(db, *card_box_ids):
-        if not card_box_ids:
-            return []
-
-        json_strings = db.hmget(TABLE_CARDBOXES, *card_box_ids)
-
-        if not json_strings:
+    def fetch(db, cardbox_id: str):
+        if not cardbox_id:
             return None
 
-        if len(json_strings) == 1:
-            _dict = utils.unjsonify(json_strings[0])
-            return CardBox(**_dict)
+        json_string = db.hget(TABLE_CARDBOXES, cardbox_id)
+
+        if not json_string:
+            return None
+
+        return CardBox(**utils.unjsonify(json_string))
+
+    @staticmethod
+    def fetch_multiple(db, cardbox_ids: list):
+        if not cardbox_ids:
+            return []
+
+        json_strings = db.hmget(TABLE_CARDBOXES, *cardbox_ids)
+
+        if not json_strings:
+            return []
 
         return [CardBox(**utils.unjsonify(json_string))
                 for json_string in json_strings]
@@ -93,13 +106,79 @@ class CardBox:
 
 
 class Card:
+    # def __init__(self, _id: str, name: str, question: str,
+    #              answers: list, correct_answer: int, explanation: str):
 
-    def __init__(self, _id: str, name: str, question: str,
-                 answers: list, correct_answer: int, explanation: str):
+    #     self._id = _id
+    #     self.name = name
+    #     self.question = question
+    #     self.answers = answers
+    #     self.correct_answer = correct_answer
+    #     self.explanation = explanation
+    @staticmethod
+    def save_content(db, box_id: str, content_list: list):
+        questions = []
+        answers = []
+        correct_answers = []
+        explanations = []
 
-        self._id = _id
-        self.name = name
-        self.question = question
-        self.answers = answers
-        self.correct_answer = correct_answer
-        self.explanation = explanation
+        for card in content_list:
+            questions.append(card['question'])
+            answers.append(card['answers'])
+            correct_answers.append(card['correct_answer'])
+            explanations.append(card['explanation'])
+
+        content = dict(questions=questions, answers=answers,
+                       correct_answers=correct_answers,
+                       explanations=explanations)
+
+        db.hset(TABLE_CONTENT, box_id, json.dumps(content))
+
+    @staticmethod
+    def fetch_content_to_list(db, box_id: str):
+
+        cards = Card.fetch_content(db, box_id)
+
+        if not cards:
+            return []
+
+        # do the magick
+        l = [dict(question=q, answers=a, correct_answer=ca, explanation=e)
+             for q, a, ca, e in zip(cards['questions'], cards['answers'],
+                                    cards['correct_answers'],
+                                    cards['explanations'])]
+        return l
+
+    @staticmethod
+    def get_card_by_index(db, box_id: str, index: int):
+
+        cards = Card.fetch_content(db, box_id)
+
+        if not cards:
+            return None
+
+        # do the magick
+        card = dict(question=cards['questions'][index],
+                    answers=cards['answers'][index],
+                    correct_answer=cards['correct_answers'][index],
+                    explanation=cards['explanations'][index])
+
+        return card
+
+    @staticmethod
+    def fetch_content(db, box_id: str):
+        cards = db.hget(TABLE_CONTENT, box_id)
+
+        if not cards:
+            return None
+
+        return json.loads(cards.decode('utf-8'))
+
+    @staticmethod
+    def get_content_size(db, box_id: str):
+        cards = Card.fetch_content(db, box_id)
+
+        if not cards:
+            return 0
+
+        return len(cards['questions'])

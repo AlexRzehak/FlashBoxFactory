@@ -41,7 +41,8 @@ class User:
 
     # TODO: look at me, I'm new!
     def get_rank(self, db):
-        return db.zrank('score', self._id)
+        return 5
+        # return db.zrank('score', self._id)
 
     def get_id(self) -> str:
         return self._id
@@ -80,7 +81,7 @@ class User:
 
         score_likes = 0
 
-        boxes = CardBox.fetch(db, *user.cardboxs)
+        boxes = CardBox.fetch_multiple(db, user.cardboxs)
         for box in boxes:
             score_likes = score_likes + box.rating
 
@@ -102,18 +103,26 @@ class User:
         return score
 
     @staticmethod
-    def fetch(db, *user_ids):
+    def fetch(db, user_id: str):
+        if not user_id:
+            return None
+
+        json_string = db.hget(TABLE_USER, user_id)
+
+        if not json_string:
+            return None
+
+        return User(**utils.unjsonify(json_string))
+
+    @staticmethod
+    def fetch_multiple(db, user_ids: list):
         if not user_ids:
             return []
 
         json_strings = db.hmget(TABLE_USER, *user_ids)
 
         if not json_strings:
-            return None
-
-        if len(json_strings) == 1:
-            _dict = utils.unjsonify(json_strings[0])
-            return User(**_dict)
+            return []
 
         return [User(**utils.unjsonify(json_string))
                 for json_string in json_strings]
@@ -204,4 +213,4 @@ class ChangePasswordForm(FlaskForm):
     new_password2 = PasswordField('Confirm new Password',
                                   validators=[DataRequired(),
                                               EqualTo('new_password')])
-    submit = SubmitField('Change')
+    submit_password = SubmitField('Change')

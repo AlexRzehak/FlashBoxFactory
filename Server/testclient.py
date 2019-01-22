@@ -14,18 +14,22 @@ TAGS = ['maths', 'physics', 'chemistry', 'music', 'history', 'silent_movies',
         'food', 'gaming', 'star_wars', 'death_star', 'traitor', 'hello_there',
         'donald_trump', 'buddha', 'the_purge', 'veganism', 'john_cena',
         'elon_musk', 'cybervalley', 'exodia', 'cheese', 'more_cheese', '1984',
-        'Mr.Robot', 'owo', ':D', 'insert tag here', 'Hääyöaieuutinen']
+        'Mr.Robot', 'owo', ':D', 'insert_tag_here', 'Hääyöaieuutinen']
 
 # USER = 'Obi_wan_Kenobi'
 # PASSWORD = 'highground'
-# USER = 'DER MARKUS'
-# PASSWORD = 'wurstbrot'
+USER = 'DER MARKUS'
+PASSWORD = 'wurstbrot'
 # USER = 'deppo'
 # PASSWORD = 'doofkopp'
-USER = 'Molagsan'
-PASSWORD = 'Zenezane00'
 # USER = 'Ainz'
 # PASSWORD = 'skurleton'
+
+SAMPLE_CONTENT = [{"correct_answer": 1, "answers": ["b", "a", "why not?"],
+                   "explanation": "Deal with it!", "question": "Why?"},
+                  {"correct_answer": 1, "answers": ["a lie", "a", "tasty!"],
+                   "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                   "Cake is..."}]
 
 
 def create_many_boxes(username, password, number=100):
@@ -45,7 +49,7 @@ def create_sample_box(username, password, name, tags, content, info):
                    name=name,
                    tags=tags,
                    info=info,
-                   content=content)
+                   content=SAMPLE_CONTENT)
     r = requests.post('http://localhost:5000/add_cardbox', json=payload)
 
 
@@ -75,7 +79,7 @@ def print_users():
 
 def main():
     # print_boxes()
-    create_many_boxes(USER, PASSWORD, 12)
+    create_many_boxes(USER, PASSWORD, 1)
     # sample_user_score(USER, PASSWORD, 400, SCORE_SYNC_SECRET)
     # test_download()
     # utils.clean_boxes(db)

@@ -33,10 +33,19 @@
     </h2>
 </div>
 
-
 <div class="container">
     <h3>User Score: {{user.score}}</h3>
-    <h3>SHOWCASE (Achievements mb?)</h3>
+    <hr>
+    {% if showcase['info']%}
+    <h4>About me:</h4>
+    <p>{{showcase['info']}}</p>
+    {% endif %}
+    {% if showcase['rank']%}
+    <h4>My global rank: {{ showcase['rank'] }}</h4>
+    {% endif %}
+    {% if showcase['cardbox'] and not showcase['cardbox'] == 'string'%}
+    <h4>My best CardBox: <a href="{{url_for('show_box', _id=showcase['cardbox']._id)}}">{{showcase['cardbox'].name}}</a></h4>
+    {% endif %}
     <br>
     <br>
     <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
