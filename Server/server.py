@@ -10,7 +10,7 @@ from werkzeug.urls import url_parse
 import utils
 from model import CardBox, Card
 from user import User, Showcase, RegistrationForm, LoginForm, ChangePasswordForm
-from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm
+from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm, ConfirmationForm
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -87,7 +87,7 @@ def show_user(_id):
               'Be the first User to have this name! :D', 'error')
         return redirect(url_for('index'))
 
-    User.update_score(db, _id)
+    score = User.update_score(db, _id)
 
     user = User.fetch(db, _id)
     picture_filepath = utils.profile_img_path(app, user._id)
@@ -112,11 +112,12 @@ def show_user(_id):
         return render_template('show_user_myself.html',
                                user=user, showcase=showcase,
                                picture_filepath=picture_filepath,
+                               score=score,
                                active='profile')
 
     return render_template('show_user.html', user=user,
                            picture_filepath=picture_filepath,
-                           showcase=showcase,
+                           showcase=showcase, score=score,
                            following=current_user.is_following(_id))
 
 
@@ -517,10 +518,31 @@ def rate_cardbox(_id):
     return redirect(url_for('show_box', _id=_id))
 
 
-# TODO MAKE WÖRK!
-@app.route('/cardboxes/<_id>/delete')
+@app.route('/user/settings/remove-avatar', methods=['POST', 'GET'])
 @login_required
-def delete_cardbox(_id, methods=['POST', 'GET']):
+def delete_profile_picture():
+
+    form = ConfirmationForm()
+    form.submit.label.text = 'Delete'
+    message = 'Are you sure you want to delete your current profile picture?'
+
+    if form.is_submitted():
+
+        if utils.delete_profile_img(app, current_user._id):
+            flash("Successfully removed profile picture.")
+        else:
+            flash("There was no picture to delete.")
+
+        return redirect(url_for('user_settings'))
+
+    return render_template('_confirm.html', message=message,
+                           address='user_settings', add_kwargs={},
+                           form=form)
+
+
+@app.route('/cardboxes/<_id>/delete', methods=['POST', 'GET'])
+@login_required
+def delete_cardbox(_id):
     box = CardBox.fetch(db, _id)
 
     if not box:
@@ -531,20 +553,26 @@ def delete_cardbox(_id, methods=['POST', 'GET']):
         flash('You can only delete cardboxes that you own.', 'error')
         return redirect(url_for('show_box', _id=_id))
 
-    if request.method == 'POST':
-        if request.args.get('del') == 'yes':
-            CardBox.delete(db, _id)
+    form = ConfirmationForm()
+    form.submit.label.text = 'Delete'
+    message = 'Are you sure you want to delete CardBox ' + box.name + '?'
 
-            current_user.cardboxs.remove(box._id)
+    if form.is_submitted():
 
-            current_user.store(db)
-            User.update_score(db, current_user._id)
+        CardBox.delete(db, _id)
 
-            flash("Successfully removed CardBox")
-            return redirect(url_for('huge_list',
-                                    foption='owner', fterm=current_user._id))
-        return redirect(url_for('show_box', _id=_id))
-    return render_template('_confirm.html', message=message, address='delete_cardbox')
+        current_user.cardboxs.remove(box._id)
+
+        current_user.store(db)
+        User.update_score(db, current_user._id)
+
+        flash("Successfully removed CardBox")
+        return redirect(url_for('huge_list',
+                                foption='owner', fterm=current_user._id))
+
+    return render_template('_confirm.html', message=message,
+                           address='show_box', add_kwargs={'_id': _id},
+                           form=form)
 
 
 # TODO fix error responses

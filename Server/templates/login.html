@@ -3,10 +3,14 @@
 {% from "bootstrap/wtf.html" import quick_form %}
 {% from "bootstrap/utils.html" import flashed_messages %}
 
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<h1 class="text-center">Welcome to login!</h1>
+<h1 class="text-center">Sign In!</h1>
 
 {{flashed_messages(container=True)}}
 

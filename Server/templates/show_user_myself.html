@@ -28,7 +28,7 @@
 </div>
 
 <div class="container">
-    <h3>Your Score: {{user.score}}</h3>
+    <h3>Your Score: {{score}}</h3>
     <hr>
     {% if not (showcase['info'] or showcase['cardbox'] or showcase['rank'])%}
     <h4>Create a Showcase for your profile <a href="{{url_for('user_settings')}}">here</a>!</h4>
@@ -46,29 +46,18 @@
     {% else %}
     <h4>My best CardBox: <a href="{{url_for('show_box', _id=showcase['cardbox']._id)}}">{{showcase['cardbox'].name}}</a></h4>
     {% endif %}    
-    {% endif %}    
+    {% endif %}
     <br>
-    <br>
+    <hr>
+    <h4>You can upload CardBoxes from offline view!</h4>
+    <hr>
     <div class="btn-group">
         <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
             your CardBoxes!</a>
         <button type="button" class="btn btn-primary btn-lg disabled">Upload CardBox</button>
     </div>
+    <br>
+    <br>
 </div>
-{% endblock %}
 
-<!-- <div class="d-flex justify-content-between">
-    <div>
-        left
-    </div>
-    <div>
-        right
-    </div>
-</div>
-<br>
-<div class="container py-3 mt-3">
-    <div class="row">
-        <div class="col-12">left</div>
-        <div class="col-12"><span class="float-right">right</span></div>
-    </div>
-</div> -->
+{% endblock %}

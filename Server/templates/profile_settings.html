@@ -26,6 +26,9 @@
     <hr>
     <h3>Change Profile Picture</h3>
     {% if picture_filepath %}
+    <a href="{{url_for('delete_profile_picture')}}" class="btn btn-danger btn-md" role="button">Delete profile picture</a>
+    <br>
+    <br>
     <img src="{{picture_filepath}}">
     {% else %}
     <h4>You have uploaded no profile picture yet.</h4>
@@ -38,6 +41,7 @@
             <br>
             {{ picture_form.submit(class="btn btn-default")}}
     </form>
+
 
     <br>
     <hr>
@@ -52,4 +56,5 @@
     <a href="{{url_for('show_user', _id=current_user._id)}}" class="btn btn-primary btn-md" role="button">Done and
         changed!</a>
 </div>
+
 {% endblock %}

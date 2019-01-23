@@ -176,12 +176,14 @@ def profile_img_path(app, user: str) -> str or None:
 
 def delete_profile_img(app, user: str):
     if profile_img_path(app, user) is None:
-        return
+        return False
 
     profile_filename = sha1_of(user) + '.jpg'
     img_path = os.path.join(app.static_folder, 'img', profile_filename)
 
     os.remove(img_path)
+
+    return True
 
 
 def save_file_field_img(field, filepath: str):

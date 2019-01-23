@@ -8,6 +8,7 @@ from model import CardBox
 
 
 TABLE_USER = 'users'
+TABLE_SCORE = 'score'
 
 
 class User:
@@ -35,14 +36,11 @@ class User:
         self.is_authenticated = True
         self.is_anonymous = False
 
-    # TODO: look at me, I'm new!
     def get_score(self, db):
-        return db.zscore('score', self._id)
+        return db.zscore(TABLE_SCORE, self._id)
 
-    # TODO: look at me, I'm new!
     def get_rank(self, db):
-        return 5
-        # return db.zrank('score', self._id)
+        return db.zrevrank(TABLE_SCORE, self._id) + 1
 
     def get_id(self) -> str:
         return self._id
@@ -97,8 +95,11 @@ class User:
         score = (user.offline_score + score_likes * 100 +
                  score_followers * 200 + score_boxes * 100)
 
-        user.score = score
-        user.store(db)
+        db.zadd(TABLE_SCORE, {_id: score})
+
+        # TODO delete while reforming database
+        # user.score = score
+        # user.store(db)
 
         return score
 

@@ -34,7 +34,7 @@
 </div>
 
 <div class="container">
-    <h3>User Score: {{user.score}}</h3>
+    <h3>User Score: {{score}}</h3>
     <hr>
     {% if showcase['info']%}
     <h4>About me:</h4>
@@ -50,13 +50,8 @@
     <br>
     <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
         this user's CardBoxes!</a>
+    <br>
+    <br>
 </div>
 
 {% endblock %}
-
-<!-- <h3>Uploaded Boxes</h3>
-    <ul class="list-group">
-        {% for box_id in user.cardboxs %}
-        <a href="{{url_for('show_box', _id=box_id)}}" class="list-group-item">{{box_id}}</a>
-        {% endfor %}
-    </ul> -->

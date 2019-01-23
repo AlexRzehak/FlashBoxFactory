@@ -10,12 +10,16 @@
 
 {% block content %}
 
-<div class="container">
-
+<div class="text-center">
+    <br>
+    <br>
     <h2>{{message}}</h2>
-
-    <form action="{{url_for('', user=USER_NAME)}}" method="POST">
-        <input type="submit" value="Delete Pic" class='btn btn-warning'>
+    <br>
+    <form action="" method="POST">
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary btn-lg")}}
+            <div style="width:30px;height:auto;display:inline-block;"></div>
+            <a href="{{url_for(address, **add_kwargs)}}" class="btn btn-default btn-lg" role="button">Cancel</a>            
     </form>
 </div>
 

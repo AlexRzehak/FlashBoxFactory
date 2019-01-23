@@ -103,3 +103,8 @@ class PictureForm(FlaskForm):
                                     utils.FixedImageSize([(256, 256)],
                                                          '256x256px only!')])
     submit = SubmitField('Change')
+
+
+class ConfirmationForm(FlaskForm):
+
+    submit = SubmitField('Yes')

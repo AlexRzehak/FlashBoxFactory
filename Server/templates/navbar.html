@@ -3,6 +3,7 @@
         <div class="navbar-header">
             <span class="navbar-brand">FlashBox</span>
         </div>
+        {% if current_user.is_authenticated %}
         <ul class="nav navbar-nav">
             <li class="{% if active=='start' %}active{%endif %}"><a href="{{url_for('index')}}">Start</a></li>
             <li class="{% if active=='explore' %}active{%endif %}"><a href="{{url_for('huge_list')}}">Explore</a></li>
@@ -20,5 +21,6 @@
         <ul class="nav navbar-nav navbar-right">
             <li><a href="{{url_for('logout')}}"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
         </ul>
+        {% endif %}
     </div>
 </nav>

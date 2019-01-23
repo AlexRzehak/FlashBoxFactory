@@ -61,8 +61,9 @@ class CardBox:
         return True
 
     @staticmethod
-    def delete(db, card_box_id: str):
-        db.hdel(TABLE_CARDBOXES, card_box_id)
+    def delete(db, cardbox_id: str):
+        db.hdel(TABLE_CARDBOXES, cardbox_id)
+        Card.remove_content(db, cardbox_id)
         return True
 
     @staticmethod
@@ -109,8 +110,6 @@ class Card:
     # def __init__(self, _id: str, name: str, question: str,
     #              answers: list, correct_answer: int, explanation: str):
 
-    #     self._id = _id
-    #     self.name = name
     #     self.question = question
     #     self.answers = answers
     #     self.correct_answer = correct_answer
@@ -173,6 +172,11 @@ class Card:
             return None
 
         return json.loads(cards.decode('utf-8'))
+
+    @staticmethod
+    def remove_content(db, box_id: str):
+        db.hdel(TABLE_CONTENT, box_id)
+        return True
 
     @staticmethod
     def get_content_size(db, box_id: str):
