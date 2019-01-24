@@ -1,27 +1,31 @@
 {% extends "bootstrap/base.html" %}
 
+{%from "bootstrap/pagination.html" import render_pagination %}
 {% from "bootstrap/utils.html" import flashed_messages %}
+{%from "bootstrap/wtf.html" import quick_form %}
 
-{% block title %}Challenge{% endblock %}
+{% block title %}Challenging {{_id}}{% endblock %}
 
 {% block navbar %}
 {% include 'navbar.html' %}
 {% endblock %}
 
 {% block content %}
-<h1 class="text-center">Hello {{current_user._id}}!</h1>
+<h1 class="text-center">Challenging {{_id}}:</h1>
+<h2 class="text-center">Choose a CardBox to play!</h2>
 
 {{flashed_messages(container=True)}}
 
 <div class="container">
-    <div class="text-center">
-        <h2>Currently challenging {{partner}}</h2>
-        <h2>There is nothing to be seen, yet.</h2>
-        <br>
-        <div class="btn-group btn-group-justified">
-            <a href="{{url_for('user_list')}}" class="btn btn-success btn-lg" role="button">Back</a>
-        </div>
-    </div>
+    <a href="{{url_for('challenge', _id=_id)}}" class="btn btn-primary btn-md" role="button">Reset Filter</a>
+    <br>
+    {{quick_form(filter_form)}}    
+    <br>
+    {{render_pagination(**pagination_kwargs)}}
+    <br>
+    {{table}}
+    <br>
+    {{render_pagination(**pagination_kwargs)}}
 </div>
 
 {% endblock %}

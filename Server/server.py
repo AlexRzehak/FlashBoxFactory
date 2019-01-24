@@ -10,7 +10,7 @@ from werkzeug.urls import url_parse
 import utils
 from model import CardBox, Card
 from user import User, Showcase, RegistrationForm, LoginForm, ChangePasswordForm
-from display import CardBoxTable, UserTable, ScoreTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm, ConfirmationForm
+from display import CardBoxTable, UserTable, ScoreTable, ChooseBoxTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm, ConfirmationForm, ChallengeFilterForm
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -47,10 +47,157 @@ def favicon():
                                'favicon.ico')
 
 
-@app.route('/challenge/<_id>')
+@app.route('/challenge')
+@login_required
+def challenge_list():
+    return render_template('challenge_list.html')
+
+
+@app.route('/challenge/<user_id>/<box_id>', methods=['POST', 'GET'])
+@login_required
+def confirm_challenge(user_id, box_id):
+    box = CardBox.fetch(db, box_id)
+
+    if not box:
+        flash('Invalid Cardbox ID.', 'error')
+        return redirect(url_for('challenge', _id=user_id))
+
+    if user_id == current_user._id:
+        flash('You can not even challenge yourself. Nice try.', 'error')
+        return redirect(url_for('user_list'))
+
+    user = User.fetch(db, user_id)
+
+    if not user:
+        flash('Invalid User ID.', 'error')
+        return redirect(url_for('user_list'))
+
+    form = ConfirmationForm()
+    form.submit.label.text = 'Challenge'
+    message = 'Challenge ' + user_id + ' to duel ' + box.name + '?'
+
+    if form.is_submitted():
+        flash("Challenge request sent!")
+        return redirect(url_for('challenge_list'))
+
+    return render_template('_confirm.html', message=message,
+                           address='challenge', add_kwargs={'_id': user_id},
+                           form=form)
+
+
+@app.route('/challenge/<_id>', methods=['POST', 'GET'])
 @login_required
 def challenge(_id):
-    return render_template('challenge.html', partner=_id)
+    if _id == current_user._id:
+        flash('You can not even challenge yourself. Nice try.', 'error')
+        return redirect(url_for('user_list'))
+
+    args = request.args
+
+    # <-- receive parameters -->
+    sort_key = args.get('sort')
+    sort_direction = args.get('direction')
+    page = args.get('page')
+    filter_option = args.get('foption')
+    filter_term = args.get('fterm')
+
+    # <-- validate parameters and set fallback values -->
+    sort_key_possible = ('name', 'owner', 'rating')
+    sort_key = sort_key if sort_key in sort_key_possible else 'rating'
+
+    sort_direction_possible = ('desc', 'asc')
+    sort_direction = (sort_direction
+                      if sort_direction in sort_direction_possible
+                      else 'desc')
+    sort_direction_bool = sort_direction == 'desc'
+
+    filter_option_possible = ('name', 'owner')
+    filter_option = (filter_option if filter_option in filter_option_possible
+                     else 'name')
+
+    # filter_term: filter only applied if non-empty string given (None case)
+    # TODO: filter_option validation analogous to tags/user input sanitization
+
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    # <-- filter form -->
+    form = ChallengeFilterForm()
+    if form.validate_on_submit():
+        filter_option = form.option.data
+        filter_term = form.term.data
+
+        kwargs = {key: value for key, value in args.items()}
+        kwargs.update(sort=sort_key, direction=sort_direction,
+                      foption=filter_option, fterm=filter_term, page=1)
+
+        return redirect(url_for('challenge', _id=_id, **kwargs))
+
+    form.term.data = filter_term
+    form.option.data = filter_option
+
+    cardboxes = CardBox.fetch_all(db)
+
+    # <-- filter process -->
+    # checks for filter_option = 'name', 'owner' if term is part of string
+    if filter_term:
+        if filter_option == 'name' or filter_option == 'owner':
+            cardboxes = [box for box in cardboxes
+                         if filter_term.lower()
+                         in getattr(box, filter_option).lower()]
+        else:
+            cardboxes = [box for box in cardboxes
+                         if filter_term in getattr(box, filter_option)]
+
+    # <-- sort process -->
+    def _sort_key_of(box):
+        if sort_key == 'name':
+            return box.name.lower()
+        if sort_key == 'owner':
+            return box.owner.lower()
+
+        return getattr(box, sort_key)
+
+    if cardboxes:
+        cardboxes.sort(key=_sort_key_of, reverse=sort_direction_bool)
+
+    # <-- pagination -->
+    per_page = 50
+    cardbox_count = len(cardboxes)
+    page_range = utils.page_range(total_count=cardbox_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=cardboxes,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=cardbox_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(sort=sort_key, direction=sort_direction,
+                  foption=filter_option, fterm=filter_term, page=page, _id=_id)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='challenge',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    def partner_id_producer(item):
+        return _id
+
+    wrapper = utils.LabelTableItemWrapper(dict(partner_id=partner_id_producer))
+
+    table = ChooseBoxTable(wrapper(pagination.items), _id,
+                           sort_reverse=sort_direction_bool,
+                           sort_by=sort_key)
+
+    return render_template('challenge.html', _id=_id,
+                           table=table,
+                           filter_form=form,
+                           pagination_kwargs=pag_kwargs)
 
 
 @app.route('/cardboxes/<_id>')
@@ -448,13 +595,14 @@ def huge_list():
     # <-- filter process -->
     # checks for filter_option = 'tags' if term exists in tag list
     # checks for filter_option = 'name', 'owner' if term is part of string
-    if filter_option == 'name' or filter_option == 'owner':
-        cardboxes = [box for box in cardboxes
-                     if filter_term.lower()
-                     in getattr(box, filter_option).lower()]
-    elif filter_term:
-        cardboxes = [box for box in cardboxes
-                     if filter_term in getattr(box, filter_option)]
+    if filter_term:
+        if filter_option == 'name' or filter_option == 'owner':
+            cardboxes = [box for box in cardboxes
+                         if filter_term.lower()
+                         in getattr(box, filter_option).lower()]
+        else:
+            cardboxes = [box for box in cardboxes
+                         if filter_term in getattr(box, filter_option)]
 
     # <-- sort process -->
     def _sort_key_of(box):
@@ -715,6 +863,7 @@ def download_cardbox(_id: str):
     vars_box = vars(box)
     vars_box['content'] = content
 
+    # use flask jsonify to create valid json response
     return jsonify(vars_box)
 
 
