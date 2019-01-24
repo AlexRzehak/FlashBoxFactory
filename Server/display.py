@@ -10,7 +10,7 @@ import utils
 class CardBoxTable(Table):
 
     classes = ['table', 'table-hover', 'table-bordered']
-    no_items = ("There are no users matching your criteria! "
+    no_items = ("There are no CardBoxes matching your criteria! "
                 "Please check your search terms.")
 
     name = LinkCol('Name', endpoint='show_box',
@@ -39,7 +39,7 @@ class ChooseBoxTable(Table):
         self.partner_id = partner_id
 
     classes = ['table', 'table-hover', 'table-bordered']
-    no_items = ("There are no users matching your criteria! "
+    no_items = ("There are no CardBoxes matching your criteria! "
                 "Please check your search terms.")
 
     start = ButtonCol('Choose', endpoint='confirm_challenge',
