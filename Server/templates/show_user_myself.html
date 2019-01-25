@@ -18,9 +18,9 @@
 
 <div class="container">
     <h2>{% if picture_filepath %}
-        <img src="{{picture_filepath}}">
+        <img id="profile-picture" src="{{picture_filepath}}">
         {% else %}
-        <img src="{{url_for('.static', filename='default_pic.png')}}">
+        <img id="profile-picture" src="{{url_for('.static', filename='default_pic.png')}}">
         {% endif %}
         {{user._id}} <a href="{{url_for('user_settings')}}" class="btn btn-primary btn-md" role="button">Profile
             Settings</a>
@@ -38,7 +38,7 @@
     <p>{{showcase['info']}}</p>
     {% endif %}
     {% if showcase['rank']%}
-    <h4>My global rank: {{ showcase['rank'] }}</h4>
+    <h4>My global rank: #{{ showcase['rank'] }}</h4>
     {% endif %}
     {% if showcase['cardbox'] %}
     {% if showcase['cardbox'] == 'string'%}
@@ -54,7 +54,6 @@
     <div class="btn-group">
         <a href="{{url_for('huge_list', foption='owner', fterm=user._id)}}" class="btn btn-success btn-lg" role="button">View
             your CardBoxes!</a>
-        <button type="button" class="btn btn-primary btn-lg disabled">Upload CardBox</button>
     </div>
     <br>
     <br>

@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
+from wtforms.validators import (ValidationError, DataRequired, Email,
+                                EqualTo, Length)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import utils
@@ -14,33 +15,24 @@ TABLE_SCORE = 'score'
 class User:
 
     def __init__(self, _id: str, password_hash=None, cardboxs=[], rated=[],
-                 offline_score=0, score=0, following=[], showcase_info=None,
+                 offline_score=0, following=[], showcase=None,
                  is_active=None, is_authenticated=None, is_anonymous=None):
 
         self._id = _id
         self.password_hash = password_hash
+
         self.cardboxs = cardboxs
         self.rated = rated
         self.offline_score = offline_score
         self.following = following
-        self.showcase_info = showcase_info or dict(info='', cardbox='',
-                                                   show_info=False,
-                                                   show_cardbox=False,
-                                                   show_rank=False)
-        # self.showcase = showcase or Showcase({}, '', '')
-
-        # TODO: clean DB if removed
-        self.score = score
+        self.showcase = showcase or dict(info='', cardbox='',
+                                         show_info=False,
+                                         show_cardbox=False,
+                                         show_rank=False)
 
         self.is_active = True
         self.is_authenticated = True
         self.is_anonymous = False
-
-    def get_score(self, db):
-        return db.zscore(TABLE_SCORE, self._id)
-
-    def get_rank(self, db):
-        return db.zrevrank(TABLE_SCORE, self._id) + 1
 
     def get_id(self) -> str:
         return self._id
@@ -63,15 +55,27 @@ class User:
     def is_following(self, _id):
         return (_id in self.following)
 
-    # TODO: look at me, I'm new!
-    @staticmethod
-    def top_users(db, _from=0, to=-1, reverse=True):
-        top_ids = [(uid.decode('utf-8'), score)
-                   for uid, score in db.zrange('score', _from, to,
-                                               desc=reverse,
-                                               withscores=True)]
+    def get_score(self, db):
+        return int(db.zscore(TABLE_SCORE, self._id))
 
-        return top_ids
+    def get_rank(self, db):
+        return db.zrevrank(TABLE_SCORE, self._id) + 1
+
+    def init_user_score(self, db):
+        db.zadd(TABLE_SCORE, {self._id: 0})
+
+    @staticmethod
+    def top_user_dicts(db, _from=0, to=-1, reverse=True):
+        top_dicts = []
+
+        ranked_tuples = db.zrange(TABLE_SCORE, _from, to,
+                                  desc=reverse, withscores=True)
+
+        for rank, (uid, score) in enumerate(ranked_tuples):
+            top_dicts.append(dict(rank=rank + 1,
+                                  _id=uid.decode('utf-8'), score=int(score)))
+
+        return top_dicts
 
     @staticmethod
     def update_score(db, _id) -> int:
@@ -96,10 +100,6 @@ class User:
                  score_followers * 200 + score_boxes * 100)
 
         db.zadd(TABLE_SCORE, {_id: score})
-
-        # TODO delete while reforming database
-        # user.score = score
-        # user.store(db)
 
         return score
 
@@ -128,7 +128,6 @@ class User:
         return [User(**utils.unjsonify(json_string))
                 for json_string in json_strings]
 
-    # TODO Add implementation that does not crash with too much data
     @staticmethod
     def fetch_all(db):
         dict_json_users = db.hgetall(TABLE_USER)
@@ -144,14 +143,6 @@ class User:
     @staticmethod
     def exists(db, user_id: str) -> bool:
         return db.hexists(TABLE_USER, user_id)
-
-
-class Showcase:
-    def __init__(self, show: dict, info: str, cardbox: str):
-
-        self.show = show
-        self.info = info
-        self.cardbox = cardbox
 
 
 class RegistrationForm(FlaskForm):

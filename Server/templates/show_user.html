@@ -18,9 +18,9 @@
 
 <div class="container">
     <h2>{% if picture_filepath %}
-        <img src="{{picture_filepath}}">
+        <img id="profile-picture" src="{{picture_filepath}}">
         {% else %}
-        <img src="{{url_for('.static', filename='default_pic.png')}}">
+        <img id="profile-picture" src="{{url_for('.static', filename='default_pic.png')}}">
         {% endif %}
         {{user._id}} <div class="btn-group">
             {% if following %}
@@ -41,7 +41,7 @@
     <p>{{showcase['info']}}</p>
     {% endif %}
     {% if showcase['rank']%}
-    <h4>My global rank: {{ showcase['rank'] }}</h4>
+    <h4>My global rank: #{{ showcase['rank'] }}</h4>
     {% endif %}
     {% if showcase['cardbox'] and not showcase['cardbox'] == 'string'%}
     <h4>My best CardBox: <a href="{{url_for('show_box', _id=showcase['cardbox']._id)}}">{{showcase['cardbox'].name}}</a></h4>

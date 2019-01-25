@@ -27,7 +27,7 @@ PASSWORD = 'wurstbrot'
 
 SAMPLE_CONTENT = [{"correct_answer": 1, "answers": ["b", "a", "why not?"],
                    "explanation": "Deal with it!", "question": "Why?"},
-                  {"correct_answer": 1, "answers": ["a lie", "a", "tasty!"],
+                  {"correct_answer": 2, "answers": ["a lie", "a", "tasty!"],
                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
                    "Cake is..."}]
 
@@ -82,8 +82,6 @@ def main():
     create_many_boxes(USER, PASSWORD, 1)
     # sample_user_score(USER, PASSWORD, 400, SCORE_SYNC_SECRET)
     # test_download()
-    # utils.clean_boxes(db)
-    # utils.clean_users(db)
 
 
 if __name__ == "__main__":

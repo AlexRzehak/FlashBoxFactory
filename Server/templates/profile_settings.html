@@ -29,7 +29,7 @@
     <a href="{{url_for('delete_profile_picture')}}" class="btn btn-danger btn-md" role="button">Delete profile picture</a>
     <br>
     <br>
-    <img src="{{picture_filepath}}">
+    <img id="profile-picture" src="{{picture_filepath}}">
     {% else %}
     <h4>You have uploaded no profile picture yet.</h4>
     {% endif %}

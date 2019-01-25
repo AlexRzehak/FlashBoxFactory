@@ -3,7 +3,7 @@
 {%from "bootstrap/pagination.html" import render_pagination %}
 {% from "bootstrap/utils.html" import flashed_messages %}
 
-{% block title %}TScoreboard{% endblock %}
+{% block title %}Scoreboard{% endblock %}
 
 {% block navbar %}
 {% include 'navbar.html' %}
@@ -16,8 +16,9 @@
 
 <div class="container">
     <br>
-    <h2>Your Score! Always improve yourself!</h2>
-    {{you}}
+    <h3 style="display:inline;">Your placement: </h3><h2 style="display:inline;">#{{your_score['rank']}}</h2><br>
+    <h3 style="display:inline;">Your score: </h3><h2 style="display:inline;">{{your_score['score']}}</h2>    
+    <h4>Always improve yourself!</h4>
     <br>
     {{render_pagination(**pagination_kwargs)}}
     <br>

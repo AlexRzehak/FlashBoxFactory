@@ -2,7 +2,8 @@ from flask import url_for, request
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from flask_table import Table, Col, LinkCol, ButtonCol
-from wtforms import RadioField, SubmitField, StringField, BooleanField, SelectField, TextAreaField, IntegerField
+from wtforms import (RadioField, SubmitField, StringField, BooleanField,
+                     SelectField, TextAreaField, IntegerField)
 
 import utils
 
@@ -43,7 +44,7 @@ class ChooseBoxTable(Table):
                 "Please check your search terms.")
 
     start = ButtonCol('Choose', endpoint='confirm_challenge',
-                      url_kwargs=dict(user_id='partner_id_label',
+                      url_kwargs=dict(user_id='partner_id',
                                       box_id='_id'),
                       text_fallback='Go!', allow_sort=False,
                       button_attrs=dict(formmethod="get"))
@@ -74,7 +75,7 @@ class UserTable(Table):
                        url_kwargs=dict(_id='_id'), attr_list='_id')
     score = Col('Score')
     following = LinkCol('Following', endpoint='toggle_follow',
-                        url_kwargs=dict(_id='_id'), attr_list='follows_label',
+                        url_kwargs=dict(_id='_id'), attr_list='follow_label',
                         allow_sort=False)
     challenge = LinkCol('Challenge', endpoint='challenge',
                         text_fallback='Challenge!', url_kwargs=dict(_id='_id'),
@@ -91,11 +92,11 @@ class UserTable(Table):
         return url_for('user_list', **kwargs)
 
 
-# TODO implement score table correctly
 class ScoreTable(Table):
 
     classes = ['table', 'table-hover', 'table-bordered']
 
+    rank = Col('Rank')
     score = Col('Score')
     username = LinkCol('Username', endpoint='show_user',
                        url_kwargs=dict(_id='_id'), attr_list='_id')

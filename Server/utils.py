@@ -91,8 +91,8 @@ class Pagination:
 
         for num in range(1, pages + 1):
             if (num <= left_edge or
-                    (num > page - left_current - 1
-                     and num < page + right_current) or
+                    (num > page - left_current - 1 and
+                     num < page + right_current) or
                     num > pages - right_edge):
 
                 if last + 1 != num:
@@ -102,15 +102,22 @@ class Pagination:
                 last = num
 
 
-class _LabelTableItemContainer:
+class _TableItemContainer:
 
     def __init__(self, obj: object):
 
         for attr, val in vars(obj).items():
             setattr(self, attr, val)
 
+        # will contain pointer to wrapped object
+        self.raw = None
 
-class LabelTableItemWrapper:
+
+class TableItemWrapper:
+    """ Creates objects with additional properties for usage with flask_table.
+    Be careful not to use names for additional properties that are already
+      used in wrapped class. (also don't use the name 'raw')
+    """
 
     def __init__(self, producer_dict: dict):
         self.producer_dict = producer_dict
@@ -119,10 +126,12 @@ class LabelTableItemWrapper:
         result = []
 
         for item in items:
-            wrapped_item = _LabelTableItemContainer(item)
+            wrapped_item = _TableItemContainer(item)
+
+            wrapped_item.raw = item
 
             for attr, producer in self.producer_dict.items():
-                setattr(wrapped_item, attr + '_label', producer(wrapped_item))
+                setattr(wrapped_item, attr, producer(wrapped_item))
 
             result.append(wrapped_item)
 

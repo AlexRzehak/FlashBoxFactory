@@ -10,13 +10,13 @@ TABLE_RATINGS = 'ratings'
 TABLE_CARDBOXES = 'cardboxs'
 TABLE_CONTENT = 'cards'
 
-DEFAULT_INFO = 'No Description feature added yet. No content display feature added yet.'
+DEFAULT_INFO = "We are sure this is an amazing CardBox!"
 
 
 class CardBox:
 
     def __init__(self, _id: str, name: str, owner: str,
-                 rating: int, tags: list, content: list, info=DEFAULT_INFO):
+                 rating: int, tags: list, info=DEFAULT_INFO):
 
         self._id = _id
         self.name = name
@@ -24,9 +24,6 @@ class CardBox:
         self.rating = rating
         self.tags = tags
         self.info = info
-
-        # TODO to be deleted
-        self.content = content
 
     @staticmethod
     def gen_card_id() -> str:
@@ -91,8 +88,6 @@ class CardBox:
         return [CardBox(**utils.unjsonify(json_string))
                 for json_string in json_strings]
 
-    # TODO Add implementation that does not crash with too much data
-
     @staticmethod
     def fetch_all(db):
         dict_json_boxes = db.hgetall(TABLE_CARDBOXES)
@@ -107,13 +102,7 @@ class CardBox:
 
 
 class Card:
-    # def __init__(self, _id: str, name: str, question: str,
-    #              answers: list, correct_answer: int, explanation: str):
 
-    #     self.question = question
-    #     self.answers = answers
-    #     self.correct_answer = correct_answer
-    #     self.explanation = explanation
     @staticmethod
     def save_content(db, box_id: str, content_list: list):
         questions = []

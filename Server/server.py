@@ -1,16 +1,20 @@
 import os
 
 import redis
-from flask import Flask, request, redirect, url_for, flash, render_template, send_from_directory, abort, jsonify
-from flask_login import LoginManager, current_user, login_user, login_required, logout_user
+from flask import (Flask, request, redirect, url_for, flash, render_template,
+                   send_from_directory, abort, jsonify)
+from flask_login import (LoginManager, current_user, login_user,
+                         login_required, logout_user)
 from flask_table import Table, Col, ButtonCol, LinkCol
 from flask_bootstrap import Bootstrap
 from werkzeug.urls import url_parse
 
 import utils
 from model import CardBox, Card
-from user import User, Showcase, RegistrationForm, LoginForm, ChangePasswordForm
-from display import CardBoxTable, UserTable, ScoreTable, ChooseBoxTable, FilterForm, CommunityForm, ShowcaseForm, PictureForm, ConfirmationForm, ChallengeFilterForm
+from user import User, RegistrationForm, LoginForm, ChangePasswordForm
+from display import (CardBoxTable, UserTable, ScoreTable, ChooseBoxTable,
+                     FilterForm, CommunityForm, ShowcaseForm, PictureForm,
+                     ConfirmationForm, ChallengeFilterForm)
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -47,157 +51,10 @@ def favicon():
                                'favicon.ico')
 
 
-@app.route('/challenge')
-@login_required
-def challenge_list():
-    return render_template('challenge_list.html')
-
-
-@app.route('/challenge/<user_id>/<box_id>', methods=['POST', 'GET'])
-@login_required
-def confirm_challenge(user_id, box_id):
-    box = CardBox.fetch(db, box_id)
-
-    if not box:
-        flash('Invalid Cardbox ID.', 'error')
-        return redirect(url_for('challenge', _id=user_id))
-
-    if user_id == current_user._id:
-        flash('You can not even challenge yourself. Nice try.', 'error')
-        return redirect(url_for('user_list'))
-
-    user = User.fetch(db, user_id)
-
-    if not user:
-        flash('Invalid User ID.', 'error')
-        return redirect(url_for('user_list'))
-
-    form = ConfirmationForm()
-    form.submit.label.text = 'Challenge'
-    message = 'Challenge ' + user_id + ' to duel ' + box.name + '?'
-
-    if form.is_submitted():
-        flash("Challenge request sent!")
-        return redirect(url_for('challenge_list'))
-
-    return render_template('_confirm.html', message=message,
-                           address='challenge', add_kwargs={'_id': user_id},
-                           form=form)
-
-
-@app.route('/challenge/<_id>', methods=['POST', 'GET'])
-@login_required
-def challenge(_id):
-    if _id == current_user._id:
-        flash('You can not even challenge yourself. Nice try.', 'error')
-        return redirect(url_for('user_list'))
-
-    args = request.args
-
-    # <-- receive parameters -->
-    sort_key = args.get('sort')
-    sort_direction = args.get('direction')
-    page = args.get('page')
-    filter_option = args.get('foption')
-    filter_term = args.get('fterm')
-
-    # <-- validate parameters and set fallback values -->
-    sort_key_possible = ('name', 'owner', 'rating')
-    sort_key = sort_key if sort_key in sort_key_possible else 'rating'
-
-    sort_direction_possible = ('desc', 'asc')
-    sort_direction = (sort_direction
-                      if sort_direction in sort_direction_possible
-                      else 'desc')
-    sort_direction_bool = sort_direction == 'desc'
-
-    filter_option_possible = ('name', 'owner')
-    filter_option = (filter_option if filter_option in filter_option_possible
-                     else 'name')
-
-    # filter_term: filter only applied if non-empty string given (None case)
-    # TODO: filter_option validation analogous to tags/user input sanitization
-
-    page = page or 1  # equals 1 if None; else: stays the same
-    try:
-        page = int(page)
-    except ValueError:
-        page = 1
-
-    # <-- filter form -->
-    form = ChallengeFilterForm()
-    if form.validate_on_submit():
-        filter_option = form.option.data
-        filter_term = form.term.data
-
-        kwargs = {key: value for key, value in args.items()}
-        kwargs.update(sort=sort_key, direction=sort_direction,
-                      foption=filter_option, fterm=filter_term, page=1)
-
-        return redirect(url_for('challenge', _id=_id, **kwargs))
-
-    form.term.data = filter_term
-    form.option.data = filter_option
-
-    cardboxes = CardBox.fetch_all(db)
-
-    # <-- filter process -->
-    # checks for filter_option = 'name', 'owner' if term is part of string
-    if filter_term:
-        if filter_option == 'name' or filter_option == 'owner':
-            cardboxes = [box for box in cardboxes
-                         if filter_term.lower()
-                         in getattr(box, filter_option).lower()]
-        else:
-            cardboxes = [box for box in cardboxes
-                         if filter_term in getattr(box, filter_option)]
-
-    # <-- sort process -->
-    def _sort_key_of(box):
-        if sort_key == 'name':
-            return box.name.lower()
-        if sort_key == 'owner':
-            return box.owner.lower()
-
-        return getattr(box, sort_key)
-
-    if cardboxes:
-        cardboxes.sort(key=_sort_key_of, reverse=sort_direction_bool)
-
-    # <-- pagination -->
-    per_page = 50
-    cardbox_count = len(cardboxes)
-    page_range = utils.page_range(total_count=cardbox_count, per_page=per_page)
-    page = (page if page in page_range else 1)
-
-    pagination = utils.Pagination(parent=cardboxes,
-                                  page=page,
-                                  per_page=per_page,
-                                  total_count=cardbox_count)
-
-    # <-- standard values-->
-    kwargs = {key: value for key, value in args.items()}
-    kwargs.update(sort=sort_key, direction=sort_direction,
-                  foption=filter_option, fterm=filter_term, page=page, _id=_id)
-
-    # <-- creation of dynamic content -->
-    pag_kwargs = dict(pagination=pagination, endpoint='challenge',
-                      prev='<', next='>', ellipses='...', size='lg',
-                      args=kwargs)
-
-    def partner_id_producer(item):
-        return _id
-
-    wrapper = utils.LabelTableItemWrapper(dict(partner_id=partner_id_producer))
-
-    table = ChooseBoxTable(wrapper(pagination.items), _id,
-                           sort_reverse=sort_direction_bool,
-                           sort_by=sort_key)
-
-    return render_template('challenge.html', _id=_id,
-                           table=table,
-                           filter_form=form,
-                           pagination_kwargs=pag_kwargs)
+"""
+<=====================[Routing: /cardboxes]==========================>
+<====================================================================>
+"""
 
 
 @app.route('/cardboxes/<_id>')
@@ -226,317 +83,57 @@ def preview_box(_id):
     return render_template('preview_box.html', box=box)
 
 
-@app.route('/user/<_id>')
+@app.route('/cardboxes/<_id>/rate')
 @login_required
-def show_user(_id):
-    if not User.exists(db, _id):
-        flash('Invalid User Name.'
-              'Be the first User to have this name! :D', 'error')
+def rate_cardbox(_id):
+    box = CardBox.fetch(db, _id)
+
+    if not box:
+        flash('Invalid Cardbox ID.', 'error')
         return redirect(url_for('index'))
 
-    score = User.update_score(db, _id)
+    if box.increment_rating(db, current_user):
+        User.update_score(db, box.owner)
+        flash('Successfully rated. Thank you for your appreciation! :3')
+        return redirect(url_for('show_box', _id=_id))
 
-    user = User.fetch(db, _id)
-    picture_filepath = utils.profile_img_path(app, user._id)
-
-    # <-- Showcase -->
-    showcase = dict(info=False, cardbox=False, rank=False)
-
-    infocase = user.showcase_info
-    if infocase['show_info']:
-        showcase['info'] = infocase['info']
-    if infocase['show_cardbox']:
-        box = CardBox.fetch(db, infocase['cardbox'])
-        if box:
-            showcase['cardbox'] = box
-        else:
-            showcase['cardbox'] = 'string'
-    if infocase['show_rank']:
-        showcase['rank'] = user.get_rank(db)
-
-    # <-- my own profile? -->
-    if user._id == current_user._id:
-        return render_template('show_user_myself.html',
-                               user=user, showcase=showcase,
-                               picture_filepath=picture_filepath,
-                               score=score,
-                               active='profile')
-
-    return render_template('show_user.html', user=user,
-                           picture_filepath=picture_filepath,
-                           showcase=showcase, score=score,
-                           following=current_user.is_following(_id))
+    flash("Already rated. Don't try to fool us!", 'error')
+    return redirect(url_for('show_box', _id=_id))
 
 
-@app.route('/user/settings', methods=['POST', 'GET'])
+@app.route('/cardboxes/<_id>/delete', methods=['POST', 'GET'])
 @login_required
-def user_settings():
+def delete_cardbox(_id):
+    box = CardBox.fetch(db, _id)
 
-    # <-- Change profile picture -->
-    picture_form = PictureForm()
-
-    if picture_form.submit.data and picture_form.validate_on_submit():
-        filename = utils.sha1_of(current_user._id) + '.jpg'
-        filepath = os.path.join(app.static_folder, 'img', filename)
-
-        utils.save_file_field_img(picture_form.picture, filepath)
-
-        flash('Successfully changed profile picture!')
-
-        return(redirect(url_for('user_settings')))
-
-    elif picture_form.submit.data and picture_form.is_submitted():
-        for message in picture_form.picture.errors:
-            flash(message, category='error')
-
-        return(redirect(url_for('user_settings')))
-
-    picture_filepath = utils.profile_img_path(app, current_user._id)
-
-    # <-- Change Showcase -->
-    boxes = CardBox.fetch_multiple(db, current_user.cardboxs)
-
-    showcase_form = ShowcaseForm()
-    choices = [(b._id, b.name) for b in boxes]
-    choices = [('', '---')] + choices
-    showcase_form.cardbox_input.choices = choices
-
-    if (showcase_form.submit_showcase.data and
-            showcase_form.validate_on_submit()):
-        new_showcase = dict(info=showcase_form.info_input.data,
-                            cardbox=showcase_form.cardbox_input.data,
-                            show_info=showcase_form.check_info.data,
-                            show_cardbox=showcase_form.check_cardbox.data,
-                            show_rank=showcase_form.check_rank.data)
-
-        current_user.showcase_info = new_showcase
-        current_user.store(db)
-
-        flash('Showcase adjusted!')
-
-        return redirect(url_for('user_settings'))
-
-    showcase_form.check_info.data = current_user.showcase_info['show_info']
-    showcase_form.info_input.data = current_user.showcase_info['info']
-    showcase_form.check_cardbox.data = current_user.showcase_info['show_cardbox']
-    showcase_form.cardbox_input.data = current_user.showcase_info['cardbox']
-    showcase_form.check_rank.data = current_user.showcase_info['show_rank']
-    showcase_form.rank_token.data = current_user.get_rank(db)
-
-    # <-- Change Password -->
-    password_form = ChangePasswordForm()
-
-    if (password_form.submit_password.data and
-            password_form.validate_on_submit()):
-
-        if not current_user.check_password(password_form.old_password.data):
-            flash('Old passwort not correct.', 'error')
-            return redirect(url_for('user_settings'))
-
-        current_user.set_password(password_form.new_password.data)
-        current_user.store(db)
-
-        flash('Successfully changed password!')
-
-        return redirect(url_for('user_settings'))
-
-    return render_template('profile_settings.html', user=current_user,
-                           picture_form=picture_form,
-                           showcase_form=showcase_form,
-                           password_form=password_form,
-                           picture_filepath=picture_filepath)
-    # showcase_form=showcase_form)
-
-
-@app.route('/community/<_id>/toggle-follow')
-@login_required
-def toggle_follow(_id):
-
-    user = User.fetch(db, _id)
-
-    if not user:
-        flash('Invalid User Name.', 'error')
+    if not box:
+        flash('Invalid Cardbox ID.', 'error')
         return redirect(url_for('index'))
 
-    current_user.toggle_follow(_id)
-    current_user.store(db)
-    User.update_score(db, current_user._id)
+    if box._id not in current_user.cardboxs:
+        flash('You can only delete cardboxes that you own.', 'error')
+        return redirect(url_for('show_box', _id=_id))
 
-    return_address = request.referrer or url_for('show_user', _id=_id)
+    form = ConfirmationForm()
+    form.submit.label.text = 'Delete'
+    message = 'Are you sure you want to delete CardBox ' + box.name + '?'
 
-    if current_user.is_following(_id):
-        flash(f'Now following {_id}')
+    if form.is_submitted():
 
-        return redirect(return_address)
+        CardBox.delete(db, _id)
 
-    flash(f'Unfollowed {_id}')
+        current_user.cardboxs.remove(box._id)
 
-    return redirect(return_address)
+        current_user.store(db)
+        User.update_score(db, current_user._id)
 
+        flash("Successfully removed CardBox")
+        return redirect(url_for('huge_list',
+                                foption='owner', fterm=current_user._id))
 
-@app.route('/community', methods=['POST', 'GET'])
-@login_required
-def user_list():
-
-    args = request.args
-
-    # <-- receive parameters -->
-    sort_key = args.get('sort')
-    sort_direction = args.get('direction')
-    page = args.get('page')
-    filter_term = args.get('fterm')
-    following = args.get('show')
-
-    # <-- validate parameters and set fallback values -->
-    sort_key_possible = ('username', 'score')
-    sort_key = sort_key if sort_key in sort_key_possible else 'score'
-
-    sort_direction_possible = ('desc', 'asc')
-    sort_direction = (sort_direction
-                      if sort_direction in sort_direction_possible
-                      else 'desc')
-    sort_direction_bool = sort_direction == 'desc'
-
-    # filter_term: filter only applied if non-empty string given (None case)
-    # TODO: filter_term validation analogous to tags/user input sanitization
-
-    following_possible = ('following', 'all')
-    following = following if following in following_possible else 'following'
-    following_bool = following == 'following'
-
-    page = page or 1  # equals 1 if None; else: stays the same
-    try:
-        page = int(page)
-    except ValueError:
-        page = 1
-
-    # <-- search form -->
-    form = CommunityForm()
-    if form.validate_on_submit():
-        filter_term = form.term.data
-
-        kwargs = {key: value for key, value in args.items()}
-        kwargs.update(sort=sort_key, direction=sort_direction,
-                      fterm=filter_term, show='all', page=1)
-
-        return redirect(url_for('user_list', **kwargs))
-
-    form.term.data = filter_term
-
-    # <-- distinction: followed users - all users -->
-    if following_bool:
-        if not current_user.following:
-            return render_template('community.html', search_form=form,
-                                   active='community', no_table=True)
-
-        users = User.fetch_multiple(db, current_user.following)
-    else:
-        users = User.fetch_all(db)
-
-    # <-- filter process -->
-    if filter_term:
-        users = [user for user in users
-                 if filter_term.lower() in getattr(user, '_id').lower()]
-
-    # <-- sort process -->
-    def _sort_key_of(user):
-        if sort_key == 'username':
-            return user._id.lower()
-
-        return getattr(user, sort_key)
-
-    if users:
-        users.sort(key=_sort_key_of, reverse=sort_direction_bool)
-
-    # <-- pagination -->
-    per_page = 50
-    user_count = len(users)
-    page_range = utils.page_range(total_count=user_count, per_page=per_page)
-    page = (page if page in page_range else 1)
-
-    pagination = utils.Pagination(parent=users,
-                                  page=page,
-                                  per_page=per_page,
-                                  total_count=user_count)
-
-    # <-- standard values-->
-    kwargs = {key: value for key, value in args.items()}
-    kwargs.update(sort=sort_key, direction=sort_direction,
-                  fterm=filter_term, show=following, page=page)
-
-    # <-- creation of dynamic content -->
-    pag_kwargs = dict(pagination=pagination, endpoint='user_list',
-                      prev='<', next='>', ellipses='...', size='lg',
-                      args=kwargs)
-
-    def follow_label_producer(item):
-        return 'Unfollow' if current_user.is_following(item._id) else 'Follow'
-
-    wrapper = utils.LabelTableItemWrapper(dict(follows=follow_label_producer))
-
-    table = UserTable(wrapper(pagination.items),
-                      sort_reverse=sort_direction_bool,
-                      sort_by=sort_key)
-
-    return render_template('community.html',
-                           table=table,
-                           search_form=form,
-                           pagination_kwargs=pag_kwargs,
-                           active='community')
-
-
-@app.route('/scoreboard')
-@login_required
-def score_list():
-
-    args = request.args
-
-    # <-- receive parameters -->
-    page = args.get('page')
-
-    # <-- validate parameters and set fallback values -->
-    page = page or 1  # equals 1 if None; else: stays the same
-    try:
-        page = int(page)
-    except ValueError:
-        page = 1
-
-    users = User.fetch_all(db)
-
-    if users:
-        users.sort(key=lambda u: u.score, reverse=True)
-
-    # <-- pagination -->
-    per_page = 50
-    user_count = len(users)
-    page_range = utils.page_range(total_count=user_count, per_page=per_page)
-    page = (page if page in page_range else 1)
-
-    pagination = utils.Pagination(parent=users,
-                                  page=page,
-                                  per_page=per_page,
-                                  total_count=user_count)
-
-    # <-- standard values-->
-    kwargs = {key: value for key, value in args.items()}
-    kwargs.update(page=page)
-
-    # <-- creation of dynamic content -->
-    pag_kwargs = dict(pagination=pagination, endpoint='score_list',
-                      prev='<', next='>', ellipses='...', size='lg',
-                      args=kwargs)
-
-    big_table = ScoreTable(pagination.items)
-
-    # TODO Show score not retarded
-    you = [User.fetch(db, current_user._id)]
-    small_table = ScoreTable(you)
-
-    return render_template('scoreboard.html',
-                           table=big_table,
-                           you=small_table,
-                           pagination_kwargs=pag_kwargs,
-                           active='community')
+    return render_template('_confirm.html', message=message,
+                           address='show_box', add_kwargs={'_id': _id},
+                           form=form)
 
 
 @app.route('/cardboxes', methods=['POST', 'GET'])
@@ -566,8 +163,8 @@ def huge_list():
     filter_option = (filter_option if filter_option in filter_option_possible
                      else 'tags')
 
-    # filter_option: filter only applied if non-empty string given (None case)
-    # TODO: filter_option validation analogous to tags/user input sanitization
+    # filter_term: filter only applied if non-empty string given (None case)
+    # TODO: filter_term validation analogous to tags/user input sanitization
 
     page = page or 1  # equals 1 if None; else: stays the same
     try:
@@ -648,22 +245,131 @@ def huge_list():
                            active='explore')
 
 
-@app.route('/cardboxes/<_id>/rate')
-@login_required
-def rate_cardbox(_id):
-    box = CardBox.fetch(db, _id)
+"""
+<=================[Routing: /user, /community]=======================>
+<====================================================================>
+"""
 
-    if not box:
-        flash('Invalid Cardbox ID.', 'error')
+
+@app.route('/user/<_id>')
+@login_required
+def show_user(_id):
+    if not User.exists(db, _id):
+        flash('Invalid User Name.'
+              'Be the first User to have this name! :D', 'error')
         return redirect(url_for('index'))
 
-    if box.increment_rating(db, current_user):
-        User.update_score(db, box.owner)
-        flash('Successfully rated. Thank you for your appreciation! :3')
-        return redirect(url_for('show_box', _id=_id))
+    score = User.update_score(db, _id)
 
-    flash("Already rated. Don't try to fool us!", 'error')
-    return redirect(url_for('show_box', _id=_id))
+    user = User.fetch(db, _id)
+    picture_filepath = utils.profile_img_path(app, user._id)
+
+    # <-- Showcase -->
+    showcase = dict(info=False, cardbox=False, rank=False)
+
+    infocase = user.showcase
+    if infocase['show_info']:
+        showcase['info'] = infocase['info']
+    if infocase['show_cardbox']:
+        box = CardBox.fetch(db, infocase['cardbox'])
+        if box:
+            showcase['cardbox'] = box
+        else:
+            showcase['cardbox'] = 'string'
+    if infocase['show_rank']:
+        showcase['rank'] = user.get_rank(db)
+
+    # <-- my own profile? -->
+    if user._id == current_user._id:
+        return render_template('show_user_myself.html',
+                               user=user, showcase=showcase,
+                               picture_filepath=picture_filepath,
+                               score=score,
+                               active='profile')
+
+    return render_template('show_user.html', user=user, active='community',
+                           picture_filepath=picture_filepath,
+                           showcase=showcase, score=score,
+                           following=current_user.is_following(_id))
+
+
+@app.route('/user/settings', methods=['POST', 'GET'])
+@login_required
+def user_settings():
+
+    # <-- Change profile picture -->
+    picture_form = PictureForm()
+
+    if picture_form.submit.data and picture_form.validate_on_submit():
+        filename = utils.sha1_of(current_user._id) + '.jpg'
+        filepath = os.path.join(app.static_folder, 'img', filename)
+
+        utils.save_file_field_img(picture_form.picture, filepath)
+
+        flash('Successfully changed profile picture!')
+
+        return(redirect(url_for('user_settings')))
+
+    elif picture_form.submit.data and picture_form.is_submitted():
+        for message in picture_form.picture.errors:
+            flash(message, category='error')
+
+        return(redirect(url_for('user_settings')))
+
+    picture_filepath = utils.profile_img_path(app, current_user._id)
+
+    # <-- Change Showcase -->
+    boxes = CardBox.fetch_multiple(db, current_user.cardboxs)
+
+    showcase_form = ShowcaseForm()
+    choices = [(b._id, b.name) for b in boxes]
+    choices = [('', '---')] + choices
+    showcase_form.cardbox_input.choices = choices
+
+    if (showcase_form.submit_showcase.data and
+            showcase_form.validate_on_submit()):
+        new_showcase = dict(info=showcase_form.info_input.data,
+                            cardbox=showcase_form.cardbox_input.data,
+                            show_info=showcase_form.check_info.data,
+                            show_cardbox=showcase_form.check_cardbox.data,
+                            show_rank=showcase_form.check_rank.data)
+
+        current_user.showcase = new_showcase
+        current_user.store(db)
+
+        flash('Showcase adjusted!')
+
+        return redirect(url_for('user_settings'))
+
+    showcase_form.check_info.data = current_user.showcase['show_info']
+    showcase_form.info_input.data = current_user.showcase['info']
+    showcase_form.check_cardbox.data = current_user.showcase['show_cardbox']
+    showcase_form.cardbox_input.data = current_user.showcase['cardbox']
+    showcase_form.check_rank.data = current_user.showcase['show_rank']
+    showcase_form.rank_token.data = current_user.get_rank(db)
+
+    # <-- Change Password -->
+    password_form = ChangePasswordForm()
+
+    if (password_form.submit_password.data and
+            password_form.validate_on_submit()):
+
+        if not current_user.check_password(password_form.old_password.data):
+            flash('Old passwort not correct.', 'error')
+            return redirect(url_for('user_settings'))
+
+        current_user.set_password(password_form.new_password.data)
+        current_user.store(db)
+
+        flash('Successfully changed password!')
+
+        return redirect(url_for('user_settings'))
+
+    return render_template('profile_settings.html', user=current_user,
+                           picture_form=picture_form,
+                           showcase_form=showcase_form,
+                           password_form=password_form,
+                           picture_filepath=picture_filepath)
 
 
 @app.route('/user/settings/remove-avatar', methods=['POST', 'GET'])
@@ -688,39 +394,363 @@ def delete_profile_picture():
                            form=form)
 
 
-@app.route('/cardboxes/<_id>/delete', methods=['POST', 'GET'])
+@app.route('/community/<_id>/toggle-follow')
 @login_required
-def delete_cardbox(_id):
-    box = CardBox.fetch(db, _id)
+def toggle_follow(_id):
+
+    user = User.fetch(db, _id)
+
+    if not user:
+        flash('Invalid User Name.', 'error')
+        return redirect(url_for('index'))
+
+    current_user.toggle_follow(_id)
+    current_user.store(db)
+    User.update_score(db, _id)
+
+    return_address = request.referrer or url_for('show_user', _id=_id)
+
+    if current_user.is_following(_id):
+        flash(f'Now following {_id}')
+
+        return redirect(return_address)
+
+    flash(f'Unfollowed {_id}')
+
+    return redirect(return_address)
+
+
+@app.route('/community', methods=['POST', 'GET'])
+@login_required
+def user_list():
+
+    args = request.args
+
+    # <-- receive parameters -->
+    sort_key = args.get('sort')
+    sort_direction = args.get('direction')
+    page = args.get('page')
+    filter_term = args.get('fterm')
+    following = args.get('show')
+
+    # <-- validate parameters and set fallback values -->
+    sort_key_possible = ('username', 'score')
+    sort_key = sort_key if sort_key in sort_key_possible else 'score'
+
+    sort_direction_possible = ('desc', 'asc')
+    sort_direction = (sort_direction
+                      if sort_direction in sort_direction_possible
+                      else 'desc')
+    sort_direction_bool = sort_direction == 'desc'
+
+    # filter_term: filter only applied if non-empty string given (None case)
+    # TODO: filter_term validation analogous to tags/user input sanitization
+
+    following_possible = ('following', 'all')
+    following = following if following in following_possible else 'following'
+    following_bool = following == 'following'
+
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    # <-- search form -->
+    form = CommunityForm()
+    if form.validate_on_submit():
+        filter_term = form.term.data
+
+        kwargs = {key: value for key, value in args.items()}
+        kwargs.update(sort=sort_key, direction=sort_direction,
+                      fterm=filter_term, show='all', page=1)
+
+        return redirect(url_for('user_list', **kwargs))
+
+    form.term.data = filter_term
+
+    # <-- distinction: followed users - all users -->
+    if following_bool:
+        if not current_user.following:
+            return render_template('community.html', search_form=form,
+                                   active='community', no_table=True)
+
+        users = User.fetch_multiple(db, current_user.following)
+    else:
+        users = User.fetch_all(db)
+
+    # <-- filter process -->
+    if filter_term:
+        users = [user for user in users
+                 if filter_term.lower() in getattr(user, '_id').lower()]
+
+    # <-- create wrapper objects -->
+    def follow_label_producer(item):
+        return 'Unfollow' if current_user.is_following(item._id) else 'Follow'
+
+    def score_value_producer(item):
+        return item.raw.get_score(db)
+
+    wrapper = utils.TableItemWrapper(dict(follow_label=follow_label_producer,
+                                          score=score_value_producer))
+
+    users = wrapper(users)
+
+    # <-- sort process -->
+    def _sort_key_of(user):
+        if sort_key == 'username':
+            return user._id.lower()
+
+        return getattr(user, sort_key)
+
+    if users:
+        users.sort(key=_sort_key_of, reverse=sort_direction_bool)
+
+    # <-- pagination -->
+    per_page = 50
+    user_count = len(users)
+    page_range = utils.page_range(total_count=user_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=users,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=user_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(sort=sort_key, direction=sort_direction,
+                  fterm=filter_term, show=following, page=page)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='user_list',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    table = UserTable(pagination.items,
+                      sort_reverse=sort_direction_bool,
+                      sort_by=sort_key)
+
+    return render_template('community.html',
+                           table=table,
+                           search_form=form,
+                           pagination_kwargs=pag_kwargs,
+                           active='community')
+
+
+@app.route('/scoreboard')
+@login_required
+def score_list():
+
+    args = request.args
+
+    # <-- receive parameters -->
+    page = args.get('page')
+
+    # <-- validate parameters and set fallback values -->
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    users = User.top_user_dicts(db)
+
+    # <-- pagination -->
+    per_page = 50
+    user_count = len(users)
+    page_range = utils.page_range(total_count=user_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=users,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=user_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(page=page)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='score_list',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    table = ScoreTable(pagination.items)
+
+    your_score = dict(score=current_user.get_score(db),
+                      rank=current_user.get_rank(db))
+
+    return render_template('scoreboard.html',
+                           table=table,
+                           your_score=your_score,
+                           pagination_kwargs=pag_kwargs,
+                           active='community')
+
+
+"""
+<=====================[Routing: /challenge]==========================>
+<====================================================================>
+"""
+
+
+@app.route('/challenge/<_id>', methods=['POST', 'GET'])
+@login_required
+def challenge(_id):
+    if _id == current_user._id:
+        flash('You can not even challenge yourself. Nice try.', 'error')
+        return redirect(url_for('user_list'))
+
+    args = request.args
+
+    # <-- receive parameters -->
+    sort_key = args.get('sort')
+    sort_direction = args.get('direction')
+    page = args.get('page')
+    filter_option = args.get('foption')
+    filter_term = args.get('fterm')
+
+    # <-- validate parameters and set fallback values -->
+    sort_key_possible = ('name', 'owner', 'rating')
+    sort_key = sort_key if sort_key in sort_key_possible else 'rating'
+
+    sort_direction_possible = ('desc', 'asc')
+    sort_direction = (sort_direction
+                      if sort_direction in sort_direction_possible
+                      else 'desc')
+    sort_direction_bool = sort_direction == 'desc'
+
+    filter_option_possible = ('name', 'owner')
+    filter_option = (filter_option if filter_option in filter_option_possible
+                     else 'name')
+
+    # filter_term: filter only applied if non-empty string given (None case)
+    # TODO: filter_term validation analogous to tags/user input sanitization
+
+    page = page or 1  # equals 1 if None; else: stays the same
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+
+    # <-- filter form -->
+    form = ChallengeFilterForm()
+    if form.validate_on_submit():
+        filter_option = form.option.data
+        filter_term = form.term.data
+
+        kwargs = {key: value for key, value in args.items()}
+        kwargs.update(sort=sort_key, direction=sort_direction,
+                      foption=filter_option, fterm=filter_term, page=1)
+
+        return redirect(url_for('challenge', _id=_id, **kwargs))
+
+    form.term.data = filter_term
+    form.option.data = filter_option
+
+    cardboxes = CardBox.fetch_all(db)
+
+    # <-- filter process -->
+    # checks for filter_option = 'name', 'owner' if term is part of string
+    if filter_term:
+        if filter_option == 'name' or filter_option == 'owner':
+            cardboxes = [box for box in cardboxes
+                         if filter_term.lower()
+                         in getattr(box, filter_option).lower()]
+        else:
+            cardboxes = [box for box in cardboxes
+                         if filter_term in getattr(box, filter_option)]
+
+    # <-- sort process -->
+    def _sort_key_of(box):
+        if sort_key == 'name':
+            return box.name.lower()
+        if sort_key == 'owner':
+            return box.owner.lower()
+
+        return getattr(box, sort_key)
+
+    if cardboxes:
+        cardboxes.sort(key=_sort_key_of, reverse=sort_direction_bool)
+
+    # <-- pagination -->
+    per_page = 50
+    cardbox_count = len(cardboxes)
+    page_range = utils.page_range(total_count=cardbox_count, per_page=per_page)
+    page = (page if page in page_range else 1)
+
+    pagination = utils.Pagination(parent=cardboxes,
+                                  page=page,
+                                  per_page=per_page,
+                                  total_count=cardbox_count)
+
+    # <-- standard values-->
+    kwargs = {key: value for key, value in args.items()}
+    kwargs.update(sort=sort_key, direction=sort_direction,
+                  foption=filter_option, fterm=filter_term, page=page, _id=_id)
+
+    # <-- creation of dynamic content -->
+    pag_kwargs = dict(pagination=pagination, endpoint='challenge',
+                      prev='<', next='>', ellipses='...', size='lg',
+                      args=kwargs)
+
+    def partner_id_producer(item):
+        return _id
+
+    wrapper = utils.TableItemWrapper(dict(partner_id=partner_id_producer))
+
+    table = ChooseBoxTable(wrapper(pagination.items), _id,
+                           sort_reverse=sort_direction_bool,
+                           sort_by=sort_key)
+
+    return render_template('challenge.html', _id=_id,
+                           table=table,
+                           filter_form=form,
+                           pagination_kwargs=pag_kwargs)
+
+
+@app.route('/challenge/<user_id>/<box_id>', methods=['POST', 'GET'])
+@login_required
+def confirm_challenge(user_id, box_id):
+    box = CardBox.fetch(db, box_id)
 
     if not box:
         flash('Invalid Cardbox ID.', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('challenge', _id=user_id))
 
-    if box._id not in current_user.cardboxs:
-        flash('You can only delete cardboxes that you own.', 'error')
-        return redirect(url_for('show_box', _id=_id))
+    if user_id == current_user._id:
+        flash('You can not even challenge yourself. Nice try.', 'error')
+        return redirect(url_for('user_list'))
+
+    user = User.fetch(db, user_id)
+
+    if not user:
+        flash('Invalid User ID.', 'error')
+        return redirect(url_for('user_list'))
 
     form = ConfirmationForm()
-    form.submit.label.text = 'Delete'
-    message = 'Are you sure you want to delete CardBox ' + box.name + '?'
+    form.submit.label.text = 'Challenge'
+    message = 'Challenge ' + user_id + ' to duel ' + box.name + '?'
 
     if form.is_submitted():
-
-        CardBox.delete(db, _id)
-
-        current_user.cardboxs.remove(box._id)
-
-        current_user.store(db)
-        User.update_score(db, current_user._id)
-
-        flash("Successfully removed CardBox")
-        return redirect(url_for('huge_list',
-                                foption='owner', fterm=current_user._id))
+        flash("Challenge request sent!")
+        return redirect(url_for('challenge_list'))
 
     return render_template('_confirm.html', message=message,
-                           address='show_box', add_kwargs={'_id': _id},
+                           address='challenge', add_kwargs={'_id': user_id},
                            form=form)
+
+
+@app.route('/challenge')
+@login_required
+def challenge_list():
+    return render_template('challenge_list.html')
+
+
+"""
+<=====================[Public API endpoints:]========================>
+<====================================================================>
+"""
 
 
 # TODO fix error responses
@@ -805,10 +835,9 @@ def add_cardbox():
         Card.save_content(db, cardbox_id, payload['content'])
 
         # create CardBox object for metadata
-        # TODO remove content=None after clearing database
         new_box = CardBox(cardbox_id, name=payload['name'],
                           owner=user._id, rating=0, info=payload['info'],
-                          tags=payload['tags'], content=None)
+                          tags=payload['tags'])
 
         new_box.store(db)
         user.store(db)
@@ -867,6 +896,12 @@ def download_cardbox(_id: str):
     return jsonify(vars_box)
 
 
+"""
+<======================[Authentification:]===========================>
+<====================================================================>
+"""
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -878,9 +913,10 @@ def register():
         user = User(form.username.data)
         user.set_password(form.password.data)
 
+        user.init_user_score(db)
         user.store(db)
 
-        flash("Accont creation successful."
+        flash("Account creation successful. "
               "Welcome to our happy lil' community!")
         return redirect(url_for('login'))
 
