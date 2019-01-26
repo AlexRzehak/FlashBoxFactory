@@ -5,6 +5,7 @@ import json
 import redis
 
 import utils
+from model import CardBox, Card
 
 
 DUEL_SUFFIX = '_duels'
@@ -15,7 +16,9 @@ TABLE_VS = 'vs-info'
 Design of challenge-dict:
 'challenger': user-id of challenging user
 'challenged': user-id of challenged user
-'box': box-id of cCardBox used for challenge
+'box_id': box-id of CardBox used for challenge
+'box_name': box name of CardBox used for challenge
+'box_content': content of CardBox used for challenge at time of challenge issue
 'started': Bool, True if challenge is accepted; running or finished
 'winner': user-id of winner if finished, else emptystring
 """
@@ -27,14 +30,23 @@ def gen_duel_id():
 
 def challenge(db, challenger_id, challenged_id, box_id):
     new_duel_id = gen_duel_id()
-    vs_dict = dict(challenger=challenger_id,
+
+    box = CardBox.fetch(db, box_id)
+    content = Card.fetch_content(db, box_id)
+
+    vs_dict = dict(duel_id=new_duel_id,
+                   challenger=challenger_id,
                    challenged=challenged_id,
-                   box=box_id,
+                   box_id=box_id,
+                   box_name=box.name,
+                   box_content=content,
                    started=False,
                    winner='')
+
     db.hset(TABLE_VS, new_duel_id, json.dumps(vs_dict))
     db.rpush(challenger_id + CHALLENGE_SUFFIX, new_duel_id)
     db.rpush(challenged_id + CHALLENGE_SUFFIX, new_duel_id)
+
     return new_duel_id
 
 
@@ -72,7 +84,7 @@ def remove_challenge(db, duel_id):
     db.lrem(duel['challenger'] + CHALLENGE_SUFFIX, 0, duel_id)
     db.lrem(duel['challenged'] + CHALLENGE_SUFFIX, 0, duel_id)
 
-    db.hdel(db, TABLE_VS, duel_id)
+    db.hdel(TABLE_VS, duel_id)
 
     return True
 
@@ -107,6 +119,20 @@ def start_duel(db, duel_id):
     db.rpush(duel['challenged'] + DUEL_SUFFIX, duel_id)
 
     return True
+
+
+def num_incoming_challenges(db, user_id):
+    # TODO: redis counter, maybe?
+    return len(fetch_challenges_to(db, user_id))
+
+
+def num_outgoing_challenges(db, user_id):
+    # TODO: redis counter, maybe?
+    return len(fetch_challenges_of(db, user_id))
+
+
+def num_duels(db, user_id):
+    return db.llen(user_id + DUEL_SUFFIX)
 
 
 def _store_duel(db, duel_id, duel):

@@ -16,8 +16,10 @@
 {{flashed_messages(container=True)}}
 <div class="container">
     <div class="btn-group">
-        <a href="{{url_for('user_list')}}" class="btn btn-primary btn-md" role="button">Only followed users</a>
-        <a href="{{url_for('user_list', show='all')}}" class="btn btn-primary btn-md" role="button">All users</a>
+        <a href="{{url_for('user_list')}}" class="btn btn-primary btn-md {% if following_bool %}active{%endif %}" role="button">Only
+            followed users</a>
+        <a href="{{url_for('user_list', show='all')}}" class="btn btn-primary btn-md {% if not following_bool %}active{%endif %}"
+            role="button">All users</a>
     </div>
 </div>
 

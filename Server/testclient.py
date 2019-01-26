@@ -80,7 +80,7 @@ def print_users():
 def main():
     # print_boxes()
     create_many_boxes(USER, PASSWORD, 1)
-    # sample_user_score(USER, PASSWORD, 400, SCORE_SYNC_SECRET)
+    # sample_user_score(USER, PASSWORD, 10000, SCORE_SYNC_SECRET)
     # test_download()
 
 

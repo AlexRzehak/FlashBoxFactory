@@ -28,7 +28,7 @@
             {% else %}
             <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
             {% endif %}
-            <a href="{{url_for('challenge', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
+            <a href="{{url_for('challenge_user', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
         </div>
     </h2>
 </div>

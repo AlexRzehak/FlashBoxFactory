@@ -2,7 +2,7 @@ import os
 
 import redis
 from flask import (Flask, request, redirect, url_for, flash, render_template,
-                   send_from_directory, abort, jsonify)
+                   send_from_directory, abort, jsonify, session)
 from flask_login import (LoginManager, current_user, login_user,
                          login_required, logout_user)
 from flask_table import Table, Col, ButtonCol, LinkCol
@@ -10,11 +10,13 @@ from flask_bootstrap import Bootstrap
 from werkzeug.urls import url_parse
 
 import utils
+import challenge
 from model import CardBox, Card
 from user import User, RegistrationForm, LoginForm, ChangePasswordForm
 from display import (CardBoxTable, UserTable, ScoreTable, ChooseBoxTable,
                      FilterForm, CommunityForm, ShowcaseForm, PictureForm,
-                     ConfirmationForm, ChallengeFilterForm)
+                     ConfirmationForm, ChallengeFilterForm,
+                     ChallgengeIncomingTable, ChallgengeSentTable)
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -532,7 +534,7 @@ def user_list():
                       sort_by=sort_key)
 
     return render_template('community.html',
-                           table=table,
+                           table=table, following_bool=following_bool,
                            search_form=form,
                            pagination_kwargs=pag_kwargs,
                            active='community')
@@ -596,7 +598,7 @@ def score_list():
 
 @app.route('/challenge/<_id>', methods=['POST', 'GET'])
 @login_required
-def challenge(_id):
+def challenge_user(_id):
     if _id == current_user._id:
         flash('You can not even challenge yourself. Nice try.', 'error')
         return redirect(url_for('user_list'))
@@ -643,7 +645,7 @@ def challenge(_id):
         kwargs.update(sort=sort_key, direction=sort_direction,
                       foption=filter_option, fterm=filter_term, page=1)
 
-        return redirect(url_for('challenge', _id=_id, **kwargs))
+        return redirect(url_for('challenge_user', _id=_id, **kwargs))
 
     form.term.data = filter_term
     form.option.data = filter_option
@@ -690,7 +692,7 @@ def challenge(_id):
                   foption=filter_option, fterm=filter_term, page=page, _id=_id)
 
     # <-- creation of dynamic content -->
-    pag_kwargs = dict(pagination=pagination, endpoint='challenge',
+    pag_kwargs = dict(pagination=pagination, endpoint='challenge_user',
                       prev='<', next='>', ellipses='...', size='lg',
                       args=kwargs)
 
@@ -706,7 +708,8 @@ def challenge(_id):
     return render_template('challenge.html', _id=_id,
                            table=table,
                            filter_form=form,
-                           pagination_kwargs=pag_kwargs)
+                           pagination_kwargs=pag_kwargs,
+                           active='challenge')
 
 
 @app.route('/challenge/<user_id>/<box_id>', methods=['POST', 'GET'])
@@ -716,7 +719,7 @@ def confirm_challenge(user_id, box_id):
 
     if not box:
         flash('Invalid Cardbox ID.', 'error')
-        return redirect(url_for('challenge', _id=user_id))
+        return redirect(url_for('challenge_user', _id=user_id))
 
     if user_id == current_user._id:
         flash('You can not even challenge yourself. Nice try.', 'error')
@@ -733,18 +736,90 @@ def confirm_challenge(user_id, box_id):
     message = 'Challenge ' + user_id + ' to duel ' + box.name + '?'
 
     if form.is_submitted():
-        flash("Challenge request sent!")
-        return redirect(url_for('challenge_list'))
+        challenge.challenge(db, current_user._id, user._id, box._id)
+        flash('Challenge request sent!')
+        return redirect(url_for('challenge_list', requests='sent'))
 
     return render_template('_confirm.html', message=message,
-                           address='challenge', add_kwargs={'_id': user_id},
+                           address='challenge_user',
+                           add_kwargs={'_id': user_id},
                            form=form)
 
 
 @app.route('/challenge')
 @login_required
 def challenge_list():
-    return render_template('challenge_list.html')
+
+    args = request.args
+
+    # <-- receive parameters -->
+    chrequests = args.get('requests')
+
+    # <-- validate parameters and set fallback values -->
+    chrequests_possible = ('sent', 'incoming')
+    chrequests = chrequests if chrequests in chrequests_possible else 'incoming'
+    # chrequests_bool = chrequests == 'incoming'
+
+    if chrequests == 'incoming':
+        requests = challenge.fetch_challenges_to(db, current_user._id)
+        table = ChallgengeIncomingTable(requests)
+
+    else:
+        requests = challenge.fetch_challenges_of(db, current_user._id)
+        table = ChallgengeSentTable(requests)
+
+    return render_template('challenge_list.html', active='challenge',
+                           table=table, chrequests=chrequests)
+
+
+@app.route('/challenge/<_id>/rm')
+@login_required
+def remove_challenge(_id):
+    vs_dict = challenge.fetch_duel(db, _id)
+
+    if not vs_dict:
+        flash('A challenge with this ID does not exist', 'error')
+        return redirect(url_for('challenge_list'))
+
+    if vs_dict['started']:
+        flash('This duel has already started.', 'error')
+        return redirect(url_for('challenge_list'))
+
+    if vs_dict['challenger'] == current_user._id:
+        challenge.remove_challenge(db, _id)
+        flash('Successfully canceled challenge request.')
+        return redirect(url_for('challenge_list', requests='sent'))
+
+    if vs_dict['challenged'] == current_user._id:
+        challenge.remove_challenge(db, _id)
+        flash('Successfully declined challenge request.')
+        return redirect(url_for('challenge_list')) 
+
+    flash('You have no rights to alter this challenge!', 'error')
+    return redirect(url_for('challenge_list'))
+
+
+@app.route('/challenge/<_id>/start')
+@login_required
+def start_duel(_id):
+    vs_dict = challenge.fetch_duel(db, _id)
+
+    if not vs_dict:
+        flash('A challenge with this ID does not exist.', 'error')
+        return redirect(url_for('challenge_list'))
+
+    if vs_dict['started']:
+        flash('This duel has already started.', 'error')
+        return redirect(url_for('challenge_list'))
+
+
+    if vs_dict['challenged'] == current_user._id:
+        # TODO start duel
+        flash('LINK START!')
+        return redirect(url_for('challenge_list')) 
+
+    flash('You have no rights to alter this challenge!', 'error')
+    return redirect(url_for('challenge_list'))
 
 
 """
@@ -961,9 +1036,21 @@ def logout():
     return redirect(url_for('index'))
 
 
+def update_notifications(user):
+    user_id = user._id
+
+    session['counter_ch_in'] = challenge.num_incoming_challenges(db, user_id)
+    session['counter_ch_out'] = challenge.num_outgoing_challenges(db, user_id)
+    session['counter_duels'] = challenge.num_duels(db, user_id)
+
+
 @login_manager.user_loader
 def load_user(user_id: str):
-    return User.fetch(db, user_id)
+    user = User.fetch(db, user_id)
+
+    update_notifications(user)
+
+    return user
 
 
 if __name__ == "__main__":

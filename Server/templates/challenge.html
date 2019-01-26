@@ -17,7 +17,7 @@
 {{flashed_messages(container=True)}}
 
 <div class="container">
-    <a href="{{url_for('challenge', _id=_id)}}" class="btn btn-primary btn-md" role="button">Reset Filter</a>
+    <a href="{{url_for('challenge_user', _id=_id)}}" class="btn btn-primary btn-md" role="button">Reset Filter</a>
     <br>
     {{quick_form(filter_form)}}    
     <br>

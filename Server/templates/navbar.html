@@ -14,6 +14,11 @@
                     FlashBox
                 </div>
             </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{url_for('challenge_list')}}">
+                <div class="navbar-brand"><span class="badge" style="margin-top: -2px;font-size:17px; color: rgb(157,157,157); background-color: rgb(56, 56, 56);">⬇{{session['counter_ch_in']}}/⬆{{session['counter_ch_out']}}/⚔{{session['counter_duels']}}</span></div>
+            </a>
+            {% endif %}
         </div>
         {% if current_user.is_authenticated %}
         <div class="collapse navbar-collapse" id="myNavbar">
@@ -28,6 +33,7 @@
                         <li><a href="{{url_for('user_list')}}">Navigation</a></li>
                     </ul>
                 </li>
+                <li class="{% if active=='challenge' %}active{%endif %}"><a href="{{url_for('challenge_list')}}">Challenge</a></li>
                 <li class="{% if active=='profile' %}active{%endif %}"><a href="{{url_for('show_user', _id=current_user._id)}}">
                         <span class="glyphicon glyphicon-user"></span> Profile</a>
                 </li>
