@@ -135,6 +135,21 @@ class ChallgengeSentTable(Table):
                      url_kwargs=dict(_id='duel_id'), text_fallback='cancel')
 
 
+class DuelTable(Table):
+
+    classes = ['table', 'table-hover', 'table-bordered']
+    no_items = ('You have currently no running duels.')
+
+    opponent = LinkCol('Opponent', endpoint='show_user',
+                         url_kwargs=dict(_id='partner_id'),
+                         attr_list='partner_id')
+    box_name = LinkCol('Box', endpoint='show_box',
+                         url_kwargs=dict(_id='box_id'),
+                         attr_list='box_name')
+    resume = LinkCol('Action', endpoint='duel',
+                     url_kwargs=dict(_id='duel_id'), text_fallback='resume!')
+
+
 class FilterForm(FlaskForm):
 
     option = RadioField(

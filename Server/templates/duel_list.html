@@ -1,0 +1,31 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+
+{% block title %}Duels{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<h1 class="text-center">Running Duels</h1>
+
+{{flashed_messages(container=True)}}
+<div class="container">
+    <a href="{{url_for('challenge_list')}}" class="btn btn-info btn-md" role="button">View Challenges</a>
+    <hr>
+    <div class="btn-group">
+        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md active"
+            role="button">Running Duels</a>
+        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md disabled"
+            role="button">Duel Archive</a>
+    </div>
+</div>
+
+<div class="container">
+    <br>
+    {{table}}
+</div>
+
+{% endblock %}

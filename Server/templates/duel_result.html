@@ -2,7 +2,7 @@
 
 {% from "bootstrap/utils.html" import flashed_messages %}
 
-{% block title %}Start{% endblock %}
+{% block title %}WIENER{% endblock %}
 
 {% block navbar %}
 {% include 'navbar.html' %}
@@ -13,11 +13,11 @@
 
 {{flashed_messages(container=True)}}
 
-<div class="text-center">
-    <br>
-    <br>
-    <p><a href="{{ url_for('login') }}">Login!</a></p>
-    <p>New User? <a href="{{ url_for('register') }}">Register!</a></p>   
-</div>
+{% if winner == 'd' %}
+<h2 class="text-center">DORO MONSUTA CADO</h2>
+{% else %}
+<h2 class="text-center">Winner is {{winner}} lol.</h2>
+{% endif %}
+
 
 {% endblock %}

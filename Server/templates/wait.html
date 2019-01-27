@@ -1,0 +1,25 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "bootstrap/utils.html" import flashed_messages %}
+
+{% block title %}Dueling {{opponent}}{% endblock %}
+
+{% block navbar %}
+{% include 'navbar.html' %}
+{% endblock %}
+
+{% block content %}
+<h1 class="text-center">versus {{opponent}}: {{cardbox_name}}</h1>
+
+{{flashed_messages(container=True)}}
+
+<h2 class="text-center">Waiting for {{opponent}} to finish.</h2>
+
+<div class="container">
+    <div class="btn-group">
+        <a href="{{url_for('duel', _id=duel_id)}}" class="btn btn-primary btn-md" role="button">Look again</a>
+        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md" role="button">Back to Duel Overview</a>
+    </div>
+</div>
+
+{% endblock %}

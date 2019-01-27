@@ -104,13 +104,20 @@ class Pagination:
 
 class _TableItemContainer:
 
-    def __init__(self, obj: object):
-
-        for attr, val in vars(obj).items():
-            setattr(self, attr, val)
+    def __init__(self, obj: object, _type: type):
 
         # will contain pointer to wrapped object
         self.raw = None
+
+        if not _type == dict:
+            for attr, val in vars(obj).items():
+                setattr(self, attr, val)
+
+        else:
+            for key, val in obj.items():
+                setattr(self, key, val)
+
+
 
 
 class TableItemWrapper:
@@ -125,8 +132,11 @@ class TableItemWrapper:
     def __call__(self, items):
         result = []
 
+        if not items:
+            return []
+
         for item in items:
-            wrapped_item = _TableItemContainer(item)
+            wrapped_item = _TableItemContainer(item, type(item))
 
             wrapped_item.raw = item
 
@@ -136,6 +146,8 @@ class TableItemWrapper:
             result.append(wrapped_item)
 
         return result
+
+
 
 
 class FixedImageSize:

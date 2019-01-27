@@ -16,7 +16,7 @@ from user import User, RegistrationForm, LoginForm, ChangePasswordForm
 from display import (CardBoxTable, UserTable, ScoreTable, ChooseBoxTable,
                      FilterForm, CommunityForm, ShowcaseForm, PictureForm,
                      ConfirmationForm, ChallengeFilterForm,
-                     ChallgengeIncomingTable, ChallgengeSentTable)
+                     ChallgengeIncomingTable, ChallgengeSentTable, DuelTable)
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -709,7 +709,7 @@ def challenge_user(_id):
                            table=table,
                            filter_form=form,
                            pagination_kwargs=pag_kwargs,
-                           active='challenge')
+                           active='versus')
 
 
 @app.route('/challenge/<user_id>/<box_id>', methods=['POST', 'GET'])
@@ -768,7 +768,7 @@ def challenge_list():
         requests = challenge.fetch_challenges_of(db, current_user._id)
         table = ChallgengeSentTable(requests)
 
-    return render_template('challenge_list.html', active='challenge',
+    return render_template('challenge_list.html', active='versus',
                            table=table, chrequests=chrequests)
 
 
@@ -793,7 +793,7 @@ def remove_challenge(_id):
     if vs_dict['challenged'] == current_user._id:
         challenge.remove_challenge(db, _id)
         flash('Successfully declined challenge request.')
-        return redirect(url_for('challenge_list')) 
+        return redirect(url_for('challenge_list'))
 
     flash('You have no rights to alter this challenge!', 'error')
     return redirect(url_for('challenge_list'))
@@ -812,14 +812,185 @@ def start_duel(_id):
         flash('This duel has already started.', 'error')
         return redirect(url_for('challenge_list'))
 
-
     if vs_dict['challenged'] == current_user._id:
-        # TODO start duel
+        challenge.start_duel(db, _id)
+        # TODO
         flash('LINK START!')
-        return redirect(url_for('challenge_list')) 
+        return redirect(url_for('duel', _id=_id))
 
     flash('You have no rights to alter this challenge!', 'error')
     return redirect(url_for('challenge_list'))
+
+
+@app.route('/duel/<_id>/r')
+@login_required
+def duel_r(_id):
+    vs_dict = challenge.fetch_duel(db, _id)
+    cuser_id = current_user._id
+
+    if not vs_dict or not vs_dict['started']:
+        flash('A duel with this ID does not exist.', 'error')
+        return redirect(url_for('duel_list'))
+
+    # if vs_dict['winner']:
+    #     return redirect(url_for('duel_result', _id=_id))
+
+    if cuser_id not in (vs_dict['challenger'], vs_dict['challenged']):
+        flash('You have no rights to access this duel!', 'error')
+        return redirect(url_for('duel_list'))
+
+    num_answers = challenge.num_answers_of(db, cuser_id, _id)
+
+    if num_answers == 0:
+        return redirect(url_for('duel', _id=_id))
+
+    # pointer to last answer card
+    index = num_answers - 1
+
+    card = challenge.get_card_from_duel(vs_dict, index)
+    answers = challenge.answers_of(db, cuser_id, _id)
+    last_choice = answers[index]
+    last_choice_letter = 'abc'[last_choice]
+    cardbox_size = challenge.duel_length(vs_dict)
+    cardbox_name = vs_dict['box_name']
+
+    correct = vs_dict['box_content']['correct_answers'][:num_answers]
+    num_correct_answers = challenge.num_correct_answers(correct, answers)
+
+    opponent = (vs_dict['challenger'] if cuser_id == vs_dict['challenged']
+                else vs_dict['challenged'])
+
+    return render_template('duel_card_result.html',
+                           answer_list=answers,
+                           opponent=opponent,
+                           cardbox_name=cardbox_name,
+                           card_number=num_answers,
+                           cardbox_size=cardbox_size,
+                           num_correct_answers=num_correct_answers,
+                           last_choice=last_choice,
+                           last_choice_letter=last_choice_letter,
+                           card=card,
+                           cardbox_id=_id,
+                           active='versus')
+
+
+@app.route('/duel/<_id>', methods=['GET', 'POST'])
+@login_required
+def duel(_id):
+    vs_dict = challenge.fetch_duel(db, _id)
+
+    cuser_id = current_user._id
+    opponent = challenge.get_opponent(vs_dict, cuser_id)
+    duel_len = challenge.duel_length(vs_dict)
+
+    if not vs_dict or not vs_dict['started']:
+        flash('A duel with this ID does not exist.', 'error')
+        return redirect(url_for('duel_list'))
+
+    if vs_dict['winner']:
+        return redirect(url_for('duel_result', _id=_id))
+
+    if cuser_id not in (vs_dict['challenger'], vs_dict['challenged']):
+        flash('You have no rights to access this duel!', 'error')
+        return redirect(url_for('duel_list'))
+
+    if (request.method == 'POST' and
+            request.form and 'choice' in request.form.keys()):
+        # the second and third 'and' is only necessary to prevent
+        # malformed/malicious POST requests form crashing the site
+
+        choice = request.form['choice']
+
+        # try casting choice to int and perform range check before
+        # actually using it for anything serious!
+        try:
+            choice = int(choice)
+
+            if choice not in range(0, 3):
+                raise ValueError()
+        except:
+            flash('Hacking much? Not appreciated. Thx.', 'error')
+            return redirect(url_for('duel', _id=_id))
+
+        challenge.put_answer(db, cuser_id, _id, choice)
+
+        we_finished = challenge.num_answers_of(db, cuser_id, _id) == duel_len
+        opp_finished = challenge.num_answers_of(db, opponent, _id) == duel_len
+
+        if we_finished and opp_finished:
+            challenge.finish_duel(db, _id)
+
+        return redirect(url_for('duel_r', _id=_id))
+
+    we_finished = challenge.num_answers_of(db, cuser_id, _id) == duel_len
+
+    cardbox_name = vs_dict['box_name']
+
+    if we_finished:
+        return render_template('wait.html',
+                               opponent=opponent,
+                               cardbox_name=cardbox_name,
+                               duel_id=_id,
+                               active='versus')
+
+    num_answers = challenge.num_answers_of(db, cuser_id, _id)
+    cardbox_size = challenge.duel_length(vs_dict)
+    card = challenge.get_card_from_duel(vs_dict, num_answers)
+
+    answers = challenge.answers_of(db, cuser_id, _id)
+    correct = vs_dict['box_content']['correct_answers'][:num_answers]
+    num_correct_answers = challenge.num_correct_answers(correct, answers)
+
+    return render_template('duel.html',
+                           opponent=opponent,
+                           cardbox_name=cardbox_name,
+                           card_number=num_answers + 1,
+                           cardbox_size=cardbox_size,
+                           num_correct_answers=num_correct_answers,
+                           number_answers=num_answers,
+                           card=card,
+                           #    cardbox_id=_id, #  TODO: for FORFEIT
+                           active='versus')
+
+
+@app.route('/duel/<_id>/result')
+@login_required
+def duel_result(_id):
+    vs_dict = challenge.fetch_duel(db, _id)
+
+    if not vs_dict or not vs_dict['winner']:
+        return redirect(url_for('duel_list'))
+
+    return render_template('duel_result.html', winner=vs_dict['winner'],
+                           active='versus')
+
+
+@app.route('/duel')
+@login_required
+def duel_list():
+
+    # TODO maybe distinguish running duels and finished duels
+    # args = request.args
+
+    # <-- receive parameters -->
+    # chrequests = args.get('requests')
+
+    # <-- validate parameters and set fallback values -->
+    # chrequests_possible = ('sent', 'incoming')
+    # chrequests = chrequests if chrequests in chrequests_possible else 'incoming'
+
+    # TODO WRONG!
+    duels = challenge.fetch_duels_of(db, current_user._id)
+
+    def opponent_id_producer(item):
+        if current_user._id == item.challenger:
+            return item.challenged
+        return item.challenger
+
+    wrapper = utils.TableItemWrapper(dict(partner_id=opponent_id_producer))
+    table = DuelTable(wrapper(duels))
+
+    return render_template('duel_list.html', table=table, active='versus')
 
 
 """
