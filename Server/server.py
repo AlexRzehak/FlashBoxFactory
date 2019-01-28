@@ -781,7 +781,7 @@ def challenge_list():
 
 @app.route('/challenge/<_id>/rm')
 @login_required
-def remove_challenge(_id):
+def delete_challenge(_id):
     vs_dict = challenge.fetch_duel(db, _id)
 
     if not vs_dict:
@@ -793,12 +793,12 @@ def remove_challenge(_id):
         return redirect(url_for('challenge_list'))
 
     if vs_dict['challenger'] == current_user._id:
-        challenge.remove_challenge(db, _id)
+        challenge.delete_challenge(db, _id)
         flash('Successfully canceled challenge request.')
         return redirect(url_for('challenge_list', requests='sent'))
 
     if vs_dict['challenged'] == current_user._id:
-        challenge.remove_challenge(db, _id)
+        challenge.delete_challenge(db, _id)
         flash('Successfully declined challenge request.')
         return redirect(url_for('challenge_list'))
 

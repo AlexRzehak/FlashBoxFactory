@@ -116,7 +116,7 @@ class ChallgengeIncomingTable(Table):
                        attr_list='box_name')
     accept = LinkCol('Accept', endpoint='start_duel',
                      url_kwargs=dict(_id='duel_id'), text_fallback='accept')
-    decline = LinkCol('Decline', endpoint='remove_challenge',
+    decline = LinkCol('Decline', endpoint='delete_challenge',
                       url_kwargs=dict(_id='duel_id'), text_fallback='decline')
 
 
@@ -131,7 +131,7 @@ class ChallgengeSentTable(Table):
     box_name = LinkCol('Box', endpoint='show_box',
                        url_kwargs=dict(_id='box_id'),
                        attr_list='box_name')
-    cancel = LinkCol('Action', endpoint='remove_challenge',
+    cancel = LinkCol('Action', endpoint='delete_challenge',
                      url_kwargs=dict(_id='duel_id'), text_fallback='cancel')
 
 

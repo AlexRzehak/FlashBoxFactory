@@ -79,7 +79,7 @@ def fetch_multiple_duels(db, duel_ids: list):
             for json_string in json_strings]
 
 
-def remove_challenge(db, duel_id):
+def _remove_challenge(db, duel_id):
     duel = fetch_duel(db, duel_id)
 
     if not duel:
@@ -87,6 +87,19 @@ def remove_challenge(db, duel_id):
 
     db.lrem(duel['challenger'] + CHALLENGE_SUFFIX, 0, duel_id)
     db.lrem(duel['challenged'] + CHALLENGE_SUFFIX, 0, duel_id)
+
+    return True
+
+
+def delete_challenge(db, duel_id):
+    duel = fetch_duel(db, duel_id)
+
+    if not duel:
+        return
+
+    _remove_challenge(db, duel_id)
+
+    db.hdel(TABLE_VS, duel_id)
 
     return True
 
@@ -111,7 +124,7 @@ def start_duel(db, duel_id):
     if duel['started']:
         return
 
-    remove_challenge(db, duel_id)
+    _remove_challenge(db, duel_id)
 
     duel['started'] = True
     _store_duel(db, duel_id, duel)
