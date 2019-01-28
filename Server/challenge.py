@@ -10,6 +10,7 @@ from model import CardBox, Card
 
 DUEL_SUFFIX = '_duels'
 CHALLENGE_SUFFIX = '_challenges'
+ARCHIVE_SUFFIX = '_archive'
 TABLE_VS = 'vs-info'
 
 DRAW = 'd'
@@ -43,6 +44,7 @@ def challenge(db, challenger_id, challenged_id, box_id):
                    box_name=box.name,
                    box_content=content,
                    started=False,
+                   finish_time=None,
                    winner='')
 
     db.hset(TABLE_VS, new_duel_id, json.dumps(vs_dict))
@@ -86,8 +88,6 @@ def remove_challenge(db, duel_id):
     db.lrem(duel['challenger'] + CHALLENGE_SUFFIX, 0, duel_id)
     db.lrem(duel['challenged'] + CHALLENGE_SUFFIX, 0, duel_id)
 
-    db.hdel(TABLE_VS, duel_id)
-
     return True
 
 
@@ -111,7 +111,6 @@ def start_duel(db, duel_id):
     if duel['started']:
         return
 
-    # order is important!
     remove_challenge(db, duel_id)
 
     duel['started'] = True
@@ -128,15 +127,22 @@ def fetch_duels_of(db, user_id) -> list:
     return fetch_multiple_duels(db, all_ids)
 
 
-def remove_duel(db, duel_id):
+def fetch_archived_duels(db, user_id) -> list:
+    all_ids = _list_items_of_key(db, user_id + ARCHIVE_SUFFIX, reverse=True)
+    return fetch_multiple_duels(db, all_ids)
+
+
+def archive_duel(db, duel_id):
     duel = fetch_duel(db, duel_id)
 
     if not duel:
         return
 
-    # TODO achivieren???
     db.lrem(duel['challenger'] + DUEL_SUFFIX, 0, duel_id)
     db.lrem(duel['challenged'] + DUEL_SUFFIX, 0, duel_id)
+
+    db.rpush(duel['challenger'] + ARCHIVE_SUFFIX, duel_id)
+    db.rpush(duel['challenged'] + ARCHIVE_SUFFIX, duel_id)
 
     return True
 
@@ -190,11 +196,13 @@ def finish_duel(db, duel_id: str) -> str:
     else:
         winner = (challenger_id if score_challenger > score_challenged
                   else challenged_id)
-    
+
     duel['winner'] = winner
+    duel['finish_time'] = utils.unix_time_in_seconds()
+
     _store_duel(db, duel_id, duel)
 
-    remove_duel(db, duel_id)
+    archive_duel(db, duel_id)
 
     return winner
 
@@ -219,6 +227,22 @@ def num_correct_answers(list_truth: list, list_answers: list):
     return sum([x_t == x_a for x_t, x_a in zip(list_truth, list_answers)])
 
 
+def check_answer_list(list_truth: list, list_answers: list):
+    len_dif = len(list_truth) - len(list_answers)
+
+    if len_dif < 0:
+        raise ValueError()
+
+    list_truth_check = list_truth[:len(list_answers)]
+
+    bool_list = [xt == xa for xt, xa in zip(list_truth_check, list_answers)]
+
+    tail = [False] * len_dif
+    bool_list.extend(tail)
+
+    return bool_list
+
+
 def num_incoming_challenges(db, user_id: str) -> int:
     # TODO: redis counter, maybe?
     return len(fetch_challenges_to(db, user_id))
@@ -240,6 +264,11 @@ def _store_duel(db, duel_id: str, duel: dict):
     db.hset(TABLE_VS, duel_id, json.dumps(duel))
 
 
-def _list_items_of_key(db, key: str) -> list:
-    return [x.decode('utf-8')
-            for x in db.lrange(key, 0, -1)]
+def _list_items_of_key(db, key: str, reverse=False) -> list:
+    result = [x.decode('utf-8')
+              for x in db.lrange(key, 0, -1)]
+
+    if reverse:
+        result.reverse()
+
+    return result

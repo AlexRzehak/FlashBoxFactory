@@ -9,16 +9,20 @@
 {% endblock %}
 
 {% block content %}
+{% if location=='current'%}
 <h1 class="text-center">Running Duels</h1>
+{% else %}
+<h1 class="text-center">Duel Archive</h1>
+{% endif %}
 
 {{flashed_messages(container=True)}}
 <div class="container">
     <a href="{{url_for('challenge_list')}}" class="btn btn-info btn-md" role="button">View Challenges</a>
     <hr>
     <div class="btn-group">
-        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md active"
+        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md {% if location == 'current' %}active{%endif %}"
             role="button">Running Duels</a>
-        <a href="{{url_for('duel_list')}}" class="btn btn-primary btn-md disabled"
+        <a href="{{url_for('duel_list', location='archive')}}" class="btn btn-primary btn-md {% if location == 'archive' %}active{%endif %}"
             role="button">Duel Archive</a>
     </div>
 </div>

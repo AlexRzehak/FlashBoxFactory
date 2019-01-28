@@ -18,7 +18,9 @@
 
 {{flashed_messages(container=True)}}
 <div class="container">
+
     <a href="{{url_for('duel_list')}}" class="btn btn-info btn-md" role="button">View running Duels</a>
+    &nbsp;&nbsp;<a href="{{url_for('user_list')}}" class="btn btn-success btn-md" role="button">Challenge Users!</a>
     <hr>
     <div class="btn-group">
         <a href="{{url_for('challenge_list')}}" class="btn btn-primary btn-md {% if chrequests == 'incoming' %}active{%endif %}"

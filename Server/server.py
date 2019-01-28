@@ -16,7 +16,8 @@ from user import User, RegistrationForm, LoginForm, ChangePasswordForm
 from display import (CardBoxTable, UserTable, ScoreTable, ChooseBoxTable,
                      FilterForm, CommunityForm, ShowcaseForm, PictureForm,
                      ConfirmationForm, ChallengeFilterForm,
-                     ChallgengeIncomingTable, ChallgengeSentTable, DuelTable)
+                     ChallgengeIncomingTable, ChallgengeSentTable, DuelTable,
+                     DuelArchiveTable)
 
 
 SCORE_SYNC_SECRET = ('25b7aa166063e863cb63d2d4'
@@ -45,6 +46,11 @@ def index():
     if current_user.is_authenticated:
         return render_template('welcome.html', active='start')
     return render_template('index.html')
+
+
+@app.route('/impressum')
+def impressum():
+    return render_template('impressum.html')
 
 
 @app.route('/favicon.ico')
@@ -475,6 +481,7 @@ def user_list():
     if following_bool:
         if not current_user.following:
             return render_template('community.html', search_form=form,
+                                   following_bool=following_bool,
                                    active='community', no_table=True)
 
         users = User.fetch_multiple(db, current_user.following)
@@ -756,8 +763,8 @@ def challenge_list():
     chrequests = args.get('requests')
 
     # <-- validate parameters and set fallback values -->
-    chrequests_possible = ('sent', 'incoming')
-    chrequests = chrequests if chrequests in chrequests_possible else 'incoming'
+    chrequests_poss = ('sent', 'incoming')
+    chrequests = chrequests if chrequests in chrequests_poss else 'incoming'
     # chrequests_bool = chrequests == 'incoming'
 
     if chrequests == 'incoming':
@@ -814,8 +821,6 @@ def start_duel(_id):
 
     if vs_dict['challenged'] == current_user._id:
         challenge.start_duel(db, _id)
-        # TODO
-        flash('LINK START!')
         return redirect(url_for('duel', _id=_id))
 
     flash('You have no rights to alter this challenge!', 'error')
@@ -961,7 +966,40 @@ def duel_result(_id):
     if not vs_dict or not vs_dict['winner']:
         return redirect(url_for('duel_list'))
 
-    return render_template('duel_result.html', winner=vs_dict['winner'],
+    challenger = vs_dict['challenger']
+    challenged = vs_dict['challenged']
+
+    cardbox_size = challenge.duel_length(vs_dict)
+
+    correct = vs_dict['box_content']['correct_answers']
+    answers_challenger = challenge.answers_of(db, challenger, _id)
+    answers_challenged = challenge.answers_of(db, challenged, _id)
+
+    num_correct_challenger = challenge.num_correct_answers(correct,
+                                                           answers_challenger)
+    num_correct_challenged = challenge.num_correct_answers(correct,
+                                                           answers_challenged)
+
+    bool_challenger = challenge.check_answer_list(correct, answers_challenger)
+    bool_challenged = challenge.check_answer_list(correct, answers_challenged)
+
+    time_stamp = utils.unix_time_to_iso(vs_dict['finish_time'])
+
+    return render_template('duel_result.html',
+                           challenger=challenger,
+                           challenged=challenged,
+                           box_name=vs_dict['box_name'],
+                           box_id=vs_dict['box_id'],
+                           cardbox_size=cardbox_size,
+                           num_correct_challenger=num_correct_challenger,
+                           num_correct_challenged=num_correct_challenged,
+                           bool_challenger=bool_challenger,
+                           bool_challenged=bool_challenged,
+                           correct_answers=correct,
+                           answers_challenger=answers_challenger,
+                           answers_challenged=answers_challenged,
+                           winner=vs_dict['winner'],
+                           time_stamp=time_stamp,
                            active='versus')
 
 
@@ -969,28 +1007,38 @@ def duel_result(_id):
 @login_required
 def duel_list():
 
-    # TODO maybe distinguish running duels and finished duels
-    # args = request.args
+    args = request.args
 
     # <-- receive parameters -->
-    # chrequests = args.get('requests')
+    location = args.get('location')
 
     # <-- validate parameters and set fallback values -->
-    # chrequests_possible = ('sent', 'incoming')
-    # chrequests = chrequests if chrequests in chrequests_possible else 'incoming'
-
-    # TODO WRONG!
-    duels = challenge.fetch_duels_of(db, current_user._id)
+    location_possible = ('current', 'archive')
+    location = location if location in location_possible else 'current'
 
     def opponent_id_producer(item):
         if current_user._id == item.challenger:
             return item.challenged
         return item.challenger
 
-    wrapper = utils.TableItemWrapper(dict(partner_id=opponent_id_producer))
-    table = DuelTable(wrapper(duels))
+    if location == 'archive':
 
-    return render_template('duel_list.html', table=table, active='versus')
+        duels = challenge.fetch_archived_duels(db, current_user._id)
+
+        def time_stamp_producer(item):
+            return utils.unix_time_to_iso(item.finish_time)
+
+        wrapper = utils.TableItemWrapper(dict(partner_id=opponent_id_producer,
+                                              time=time_stamp_producer))
+        table = DuelArchiveTable(wrapper(duels))
+
+    else:
+        duels = challenge.fetch_duels_of(db, current_user._id)
+        wrapper = utils.TableItemWrapper(dict(partner_id=opponent_id_producer))
+        table = DuelTable(wrapper(duels))
+
+    return render_template('duel_list.html', table=table,
+                           location=location, active='versus')
 
 
 """

@@ -2,6 +2,7 @@ import os
 import io
 import json
 import math
+import time
 import hashlib
 
 from PIL import Image
@@ -29,6 +30,17 @@ def clean_users(db):
 
 def page_range(total_count: int, per_page: int):
     return range(1, int(math.ceil(total_count / per_page))+1)
+
+
+TIME_FORMAT_STRING = '%Y-%m-%d %R'
+
+
+def unix_time_in_seconds() -> int:
+    return int(time.time())
+
+
+def unix_time_to_iso(unix_time: int) -> str:
+    return time.strftime(TIME_FORMAT_STRING, time.localtime(unix_time))
 
 
 class Pagination:
@@ -118,8 +130,6 @@ class _TableItemContainer:
                 setattr(self, key, val)
 
 
-
-
 class TableItemWrapper:
     """ Creates objects with additional properties for usage with flask_table.
     Be careful not to use names for additional properties that are already
@@ -146,8 +156,6 @@ class TableItemWrapper:
             result.append(wrapped_item)
 
         return result
-
-
 
 
 class FixedImageSize:

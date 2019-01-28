@@ -23,13 +23,13 @@
         {% if current_user.is_authenticated %}
         <div class="collapse navbar-collapse" id="myNavbar">
             <ul class="nav navbar-nav">
-                <li class="{% if active=='start' %}active{%endif %}"><a href="{{url_for('index')}}">Start</a></li>
+                <!-- <li class="{% if active=='start' %}active{%endif %}"><a href="{{url_for('index')}}">Start</a></li> -->
                 <li class="{% if active=='explore' %}active{%endif %}"><a href="{{url_for('huge_list')}}">Explore</a></li>
                 <li class="dropdown {% if active=='community' %}active{%endif %}">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="{{url_for('score_list')}}">Community <span
                             class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{url_for('score_list')}}">Scoreboards</a></li>
+                        <li><a href="{{url_for('score_list')}}">Scoreboard</a></li>
                         <li><a href="{{url_for('user_list')}}">Navigation</a></li>
                     </ul>
                 </li>
@@ -39,9 +39,9 @@
                     <ul class="dropdown-menu">
                         <li><a href="{{url_for('challenge_list')}}">Challenges</a></li>
                         <li><a href="{{url_for('duel_list')}}">Duels</a></li>
+                        <li><a href="{{url_for('duel_list', location='archive')}}">Archive</a></li>
                     </ul>
                 </li>
-                <!-- <li class="{% if active=='challenge' %}active{%endif %}"><a href="{{url_for('challenge_list')}}">Challenge</a></li> -->
                 <li class="{% if active=='profile' %}active{%endif %}"><a href="{{url_for('show_user', _id=current_user._id)}}">
                         <span class="glyphicon glyphicon-user"></span> Profile</a>
                 </li>

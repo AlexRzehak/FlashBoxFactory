@@ -6,4 +6,4 @@
 - have a nice day!
 
 # Android-App:
-## TODO
+## [GitHub repository for Client](https://github.com/Googelus/FlashBoxFactoryClient)

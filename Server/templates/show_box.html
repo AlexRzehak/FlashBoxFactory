@@ -27,10 +27,6 @@
             </h2>
         </div>
     </div>
-    <div class="btn-group">        
-        <a href="{{url_for('prepare_download', _id=box._id)}}" class="btn btn-info btn-lg" role="button">Download!</a>
-        <a href="{{url_for('preview_box', _id=box._id)}}" class="btn btn-primary btn-lg disabled" role="button">Take a peek!</a>
-    </div>
 
     <hr>
     <h3>Rating: {{box.rating}} <a href="{{url_for('rate_cardbox', _id=box._id)}}" class="btn btn-primary btn-md" role="button">Upvote!</a></h3>

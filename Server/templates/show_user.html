@@ -22,15 +22,16 @@
         {% else %}
         <img id="profile-picture" src="{{url_for('.static', filename='default_pic.png')}}">
         {% endif %}
-        {{user._id}} <div class="btn-group">
-            {% if following %}
-            <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Unfollow</a>
-            {% else %}
-            <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
-            {% endif %}
-            <a href="{{url_for('challenge_user', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Challenge!</a>
-        </div>
+        {{user._id}}
     </h2>
+    <div class="btn-group">
+        {% if following %}
+        <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Unfollow</a>
+        {% else %}
+        <a href="{{url_for('toggle_follow', _id=user._id)}}" class="btn btn-primary btn-md" role="button">Follow</a>
+        {% endif %}
+        <a href="{{url_for('challenge_user', _id=user._id)}}" class="btn btn-info btn-md" role="button">Challenge!</a>
+    </div>
 </div>
 
 <div class="container">

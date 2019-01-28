@@ -14,33 +14,35 @@
 {{flashed_messages(container=True)}}
 
 <div class="container">
+    <h2>Question No. {{card_number}}/{{cardbox_size}}:
+        <small>{{num_correct_answers}}/{{card_number}} correct</small></h2>
+    <hr>
+    <h3 class="text-info">Q: {{card['question']}}</h3>
+    <br>
+    <div>
+        <button class="btn {% if 0 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg"
+            style="text-align:left;">a)&nbsp;{{card['answers'][0]}}</button>
+        <br>
+        <button class="btn {% if 1 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg"
+            style="text-align:left;">b)&nbsp;{{card['answers'][1]}}</button>
+        <br>
+        <button class="btn {% if 2 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg"
+            style="text-align:left;">c)&nbsp;{{card['answers'][2]}}</button>
+    </div>
+
     {% if last_choice == card['correct_answer'] %}
     <h2>Your answer <span class="text-success font-weight-bold">{{last_choice_letter}})</span> is <span class="text-success font-weight-bold">correct</span>!</h2>
     {% else %}
     <h2>Your answer <span class="text-danger font-weight-bold">{{last_choice_letter}})</span> is <span class="text-danger font-weight-bold">not
             correct</span>!</h2>
     {% endif %}
-</div>
 
-<div class="container">
-    <h2>Question No. {{card_number}}/{{cardbox_size}}:</h2>
-    <h3>&nbsp;&nbsp;{{num_correct_answers}}/{{card_number}} correct answers</h3>
-
-    <h3 class="text-info">Q: {{card['question']}}</h3>
-    <br>
-    <div>
-        <button class="btn {% if 0 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg">a)&nbsp;{{card['answers'][0]}}</button>
-        <br>
-        <button class="btn {% if 1 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg">b)&nbsp;{{card['answers'][1]}}</button>
-        <br>
-        <button class="btn {% if 2 == card['correct_answer']%}btn-success{% else %}btn-danger{% endif %} btn-block btn-lg">c)&nbsp;{{card['answers'][2]}}</button>
-    </div>
     <hr>
-    <a href="{{url_for('duel', _id=cardbox_id)}}" class="btn btn-info btn-md" role="button">Next</a>
+    <a href="{{url_for('duel', _id=cardbox_id)}}" class="btn btn-info btn-lg" role="button">Next Question</a>
 
-    <h3 class="text-info">Explanation:</h3>
-    <h3 class="text-info">{{card['explanation']}}</h3>
+    <h3 class="text-info"><u>Explanation:</u></h3>
+    <h3 class="text-info" style="padding: 0px;margin: 0px;">{{card['explanation']}}</h3>
     <hr>
-    <a href="{{url_for('duel', _id=cardbox_id)}}" class="btn btn-info btn-md" role="button">Next</a>
+    <a href="{{url_for('duel', _id=cardbox_id)}}" class="btn btn-info btn-md" role="button">Next Question</a>
 </div>
 {% endblock %}

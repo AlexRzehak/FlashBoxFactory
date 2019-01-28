@@ -112,8 +112,8 @@ class ChallgengeIncomingTable(Table):
                          url_kwargs=dict(_id='challenger'),
                          attr_list='challenger')
     box_name = LinkCol('Box', endpoint='show_box',
-                         url_kwargs=dict(_id='box_id'),
-                         attr_list='box_name')
+                       url_kwargs=dict(_id='box_id'),
+                       attr_list='box_name')
     accept = LinkCol('Accept', endpoint='start_duel',
                      url_kwargs=dict(_id='duel_id'), text_fallback='accept')
     decline = LinkCol('Decline', endpoint='remove_challenge',
@@ -129,23 +129,39 @@ class ChallgengeSentTable(Table):
                          url_kwargs=dict(_id='challenged'),
                          attr_list='challenged')
     box_name = LinkCol('Box', endpoint='show_box',
-                         url_kwargs=dict(_id='box_id'),
-                         attr_list='box_name')
+                       url_kwargs=dict(_id='box_id'),
+                       attr_list='box_name')
     cancel = LinkCol('Action', endpoint='remove_challenge',
                      url_kwargs=dict(_id='duel_id'), text_fallback='cancel')
+
+
+class DuelArchiveTable(Table):
+
+    classes = ['table', 'table-hover', 'table-bordered']
+    no_items = ('You have no archived duels with these criteria.')
+
+    time = Col('Date')
+    opponent = LinkCol('Opponent', endpoint='show_user',
+                       url_kwargs=dict(_id='partner_id'),
+                       attr_list='partner_id')
+    box_name = LinkCol('Box', endpoint='show_box',
+                       url_kwargs=dict(_id='box_id'),
+                       attr_list='box_name')
+    results = LinkCol('Action', endpoint='duel_result',
+                      url_kwargs=dict(_id='duel_id'), text_fallback='results')
 
 
 class DuelTable(Table):
 
     classes = ['table', 'table-hover', 'table-bordered']
-    no_items = ('You have currently no running duels.')
+    no_items = ('You currently have no running duels.')
 
     opponent = LinkCol('Opponent', endpoint='show_user',
-                         url_kwargs=dict(_id='partner_id'),
-                         attr_list='partner_id')
+                       url_kwargs=dict(_id='partner_id'),
+                       attr_list='partner_id')
     box_name = LinkCol('Box', endpoint='show_box',
-                         url_kwargs=dict(_id='box_id'),
-                         attr_list='box_name')
+                       url_kwargs=dict(_id='box_id'),
+                       attr_list='box_name')
     resume = LinkCol('Action', endpoint='duel',
                      url_kwargs=dict(_id='duel_id'), text_fallback='resume!')
 

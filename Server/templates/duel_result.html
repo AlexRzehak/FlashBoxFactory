@@ -2,22 +2,126 @@
 
 {% from "bootstrap/utils.html" import flashed_messages %}
 
-{% block title %}WIENER{% endblock %}
+{% block title %}Result: {{challenger}} vs {{challenged}} - {{box_name}}{% endblock %}
 
 {% block navbar %}
 {% include 'navbar.html' %}
 {% endblock %}
 
 {% block content %}
-<h1 class="text-center">Hello there!</h1>
+<!-- <div class="container">
+    <div class="text-center">
+        <h1 class="text-left" style="margin-bottom:0px;">{{challenger}}</h1>
+        <h2 class="text-center" style="margin-top:0px; margin-bottom:0px;">versus</h2>
+        <h1 class="text-right" style="margin-top:0px;">{{challenged}}</h1>
+    </div>
+</div> -->
+
+<div class="container">
+    <h1 class="text-center">Duel Results<br>
+        <small>@{{time_stamp}}</small></h1>
+    <h3>Player 1: {{challenger}}</h3>
+    <h3>Player 2: {{challenged}}</h3>
+    <h3>Box: <a href="{{url_for('show_box', _id=box_id)}}">{{box_name}}</a></h3>
+    <a href="{{url_for('duel_list', location='archive')}}" style="margin-top:5px;" class="btn btn-primary btn-md" role="button">Return to Archive</a>
+    
+</div>
+
+<!-- <div class="container">
+    <div class="row">
+        <h1>
+            <div class="col-xs-12 col-md-4">{{challenger}}</div>
+            <span class="col-xs-1 col-md-1"></span>
+            <div class="col-xs-12 col-md-2">
+                <h2 class="text-center" style="margin-top:0px; margin-bottom:0px;">versus</h2>
+            </div>
+            <div class="col-xs-11 col-md-4 text-right">{{challenged}}</div>
+            <span class="col-xs-1 col-md-1"></span>
+        </h1>
+    </div>
+</div> -->
+
+
+<div class="container">
+    <hr>
+    <div class="row">
+            <h3>
+                <div class="col-xs-5 text-center">Player 1</div>
+                <div class="col-xs-2 text-center"></div>
+                <div class="col-xs-5 text-center">Player 2</div>
+            </h3>
+        </div>
+    <div class="row">
+        <h2>
+            <div class="col-xs-5 text-center">{{num_correct_challenger}}/{{cardbox_size}}</div>
+            <div class="col-xs-2 text-center">:</div>
+            <div class="col-xs-5 text-center">{{num_correct_challenged}}/{{cardbox_size}}</div>
+        </h2>
+    </div>
+
+
+    {% if winner == 'd' %}
+    <h2 class="text-center bg-warning">It's a tie!</h2>
+    {% else %}
+    <h2 class="text-center bg-success"><strong>Victory for {{winner}}</strong>!</h2>
+    {% endif %}
+    
+    <hr>
+    <div class="row">
+        <span class="col-xs-1 col-md-2"></span>
+        <div class="col-xs-4 col-md-2">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Q</th>
+                        <th>A</th>
+                        <th>Tip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(cardbox_size) %}
+                    <tr class="{% if bool_challenger[i]%}bg-success{% else %}bg-danger{% endif %}">
+                        <td>{{i + 1}}</td>
+                        <td>{{'abc'[correct_answers[i]]}})</td>
+                        <td>{{'abc'[answers_challenger[i]]}})</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <span class="col-xs-2 col-md-4"></span>
+        <div class="col-xs-4 col-md-2">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Q</th>
+                        <th>A</th>
+                        <th>Tip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(cardbox_size) %}
+                    <tr class="{% if bool_challenged[i]%}bg-success{% else %}bg-danger{% endif %}">
+                        <td>{{i + 1}}</td>
+                        <td>{{'abc'[correct_answers[i]]}})</td>
+                        <td>{{'abc'[answers_challenged[i]]}})</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <span class="col-xs-1 col-md-2"></span>
+    </div>
+    <hr>
+    <a href="{{url_for('duel_list', location='archive')}}" class="btn btn-primary btn-md" role="button">Return</a>
+
+</div>
+
+
 
 {{flashed_messages(container=True)}}
 
-{% if winner == 'd' %}
-<h2 class="text-center">DORO MONSUTA CADO</h2>
-{% else %}
-<h2 class="text-center">Winner is {{winner}} lol.</h2>
-{% endif %}
+
 
 
 {% endblock %}

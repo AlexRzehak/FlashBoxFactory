@@ -14,24 +14,25 @@
 {{flashed_messages(container=True)}}
 
 <div class="container">
-    <h2>Question No. {{card_number}}/{{cardbox_size}}:</h2>
-    <h3>&nbsp;&nbsp;{{num_correct_answers}}/{{number_answers}} correct answers</h3>
-    <br>
-
+    <h2>Question No. {{card_number}}/{{cardbox_size}}:
+        <small>{{num_correct_answers}}/{{number_answers}} correct</small></h2>
+    <hr>
     <h3 class="text-info">Q: {{card['question']}}</h3>
     <br>
     <div>
         <form action="" method="post">
-            <button name="choice" value="0" class="btn btn-default btn-block btn-lg">a)&nbsp;{{card['answers'][0]}}</button>
+            <button name="choice" value="0" class="btn btn-default btn-block btn-lg" style="text-align:left;">a)&nbsp;{{card['answers'][0]}}</button>
         </form>
         <br>
         <form action="" method="post">
-            <button name="choice" value="1" class="btn btn-default btn-block btn-lg">b)&nbsp;{{card['answers'][1]}}</button>
+            <button name="choice" value="1" class="btn btn-default btn-block btn-lg" style="text-align:left;">b)&nbsp;{{card['answers'][1]}}</button>
         </form>
         <br>
         <form action="" method="post">
-            <button name="choice" value="2" class="btn btn-default btn-block btn-lg">c)&nbsp;{{card['answers'][2]}}</button>
+            <button name="choice" value="2" class="btn btn-default btn-block btn-lg" style="text-align:left;">c)&nbsp;{{card['answers'][2]}}</button>
         </form>
     </div>
+    <hr>
+    <a href="{{url_for('duel_list')}}" class="btn btn-info btn-md" role="button">Pause</a>
 </div>
 {% endblock %}
