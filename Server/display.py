@@ -138,7 +138,7 @@ class ChallgengeSentTable(Table):
 class DuelArchiveTable(Table):
 
     classes = ['table', 'table-hover', 'table-bordered']
-    no_items = ('You have no archived duels with these criteria.')
+    no_items = ('You have no archived duels yet.')
 
     time = Col('Date')
     opponent = LinkCol('Opponent', endpoint='show_user',

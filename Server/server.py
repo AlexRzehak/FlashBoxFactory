@@ -1066,7 +1066,6 @@ def add_cardbox():
     # None check
     if any(payload[key] is None for key in req):
         print('key is None')
-        print('(also: Obama is gone!)')
         abort(404)
 
     # type check
@@ -1256,6 +1255,9 @@ def logout():
 
 
 def update_notifications(user):
+    if not user:
+        return
+
     user_id = user._id
 
     session['counter_ch_in'] = challenge.num_incoming_challenges(db, user_id)

@@ -32,6 +32,32 @@ SAMPLE_CONTENT = [{"correct_answer": 1, "answers": ["b", "a", "why not?"],
                    "Cake is..."}]
 
 
+SAMPLE_CONTENT2 = [{"correct_answer": 1,
+                    "answers": ["127.0.0.1", "134.2.2.38", "134.2.2.34"],
+                    "explanation":
+                    "Additional Information: 127.0.0.1 is localhost.",
+                    "question":
+                    "What is the IP address of the exercise server?"},
+                   {"correct_answer": 2, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"},
+                   {"correct_answer": 0, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"},
+                   {"correct_answer": 2, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"},
+                   {"correct_answer": 1, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"},
+                   {"correct_answer": 1, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"},
+                   {"correct_answer": 2, "answers": ["a lie", "a", "tasty!"],
+                    "explanation": "WHY YOU TAKE MY CAKE?!", "question":
+                    "huhuw"}]
+
+
 def create_many_boxes(username, password, number=100):
     for _ in range(number):
         upper = random.randint(4, 12)
@@ -49,7 +75,7 @@ def create_sample_box(username, password, name, tags, content, info):
                    name=name,
                    tags=tags,
                    info=info,
-                   content=SAMPLE_CONTENT)
+                   content=SAMPLE_CONTENT2)
     r = requests.post('http://localhost:5000/add_cardbox', json=payload)
 
 
@@ -79,8 +105,12 @@ def print_users():
 
 def main():
     # print_boxes()
-    create_many_boxes(USER, PASSWORD, 1)
-    # sample_user_score(USER, PASSWORD, 10000, SCORE_SYNC_SECRET)
+    # create_many_boxes(USER, PASSWORD, 1)
+    create_sample_box(USER, PASSWORD, 'Webentwicklung', [
+                      'Informatik', 'Internet'], '',
+                      ('Vorbereitung auf die Klausur '
+                       '"Grundlagen der Webentwicklung" 18/19'))
+    # sample_user_score('deppo', 'doofkopp', 1200, SCORE_SYNC_SECRET)
     # test_download()
 
 
